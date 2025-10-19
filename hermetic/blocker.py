@@ -1,7 +1,7 @@
 # hermetic/blocker.py
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Any
 from contextlib import ContextDecorator, AbstractAsyncContextManager
 import asyncio
 import threading
@@ -58,12 +58,12 @@ class _HermeticBlocker(ContextDecorator, AbstractAsyncContextManager):
     """
     __slots__ = ("cfg", "_entered")
 
-    def __init__(self, cfg: BlockConfig):
+    def __init__(self, cfg: BlockConfig)->None:
         self.cfg = cfg
         self._entered = False
 
     # ---- sync protocol ----
-    def __enter__(self):
+    def __enter__(self)->"_HermeticBlocker":
         global _REFCOUNT
         with _LOCK:
             if _REFCOUNT == 0:
@@ -81,7 +81,7 @@ class _HermeticBlocker(ContextDecorator, AbstractAsyncContextManager):
             self._entered = True
         return self
 
-    def __exit__(self, exc_type, exc, tb):
+    def __exit__(self, exc_type:Any, exc:Any, tb:Any)->None:
         global _REFCOUNT
         with _LOCK:
             if self._entered:
@@ -90,14 +90,14 @@ class _HermeticBlocker(ContextDecorator, AbstractAsyncContextManager):
                 if _REFCOUNT == 0:
                     uninstall_all()
         # don’t suppress exceptions
-        return False
+        return None
 
     # ---- async protocol ----
-    async def __aenter__(self):
+    async def __aenter__(self)->"_HermeticBlocker":
         # Reuse sync enter; safe in async contexts
         return self.__enter__()
 
-    async def __aexit__(self, exc_type, exc, tb):
+    async def __aexit__(self, exc_type:Any, exc:Any, tb:Any)->None:
         return self.__exit__(exc_type, exc, tb)
 
 
@@ -138,7 +138,7 @@ def hermetic_blocker(
 
 
 # Optional convenience decorator with arguments name parity
-def with_hermetic(**kwargs) -> _HermeticBlocker:
+def with_hermetic(**kwargs:Any) -> _HermeticBlocker:
     """
     Decorator factory mirroring hermetic_blocker kwargs.
 

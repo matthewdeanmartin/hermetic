@@ -7,7 +7,7 @@ import re
 import runpy
 import sys
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Any
 from .util import which
 
 SHEBANG_RE = re.compile(r"^#!\s*(\S+)(?:\s+.*)?$")
@@ -76,7 +76,7 @@ def resolve(target: str) -> TargetSpec:
     # module as script (fallback)
     return TargetSpec(module=target, attr="__main__", mode="inprocess")
 
-def invoke_inprocess(spec: TargetSpec):
+def invoke_inprocess(spec: TargetSpec)->dict[Any,Any]:
     sys.modules.pop(spec.module, None)  # ensure fresh import after guards
     if spec.attr == "__main__":
         return runpy.run_module(spec.module, run_name="__main__")

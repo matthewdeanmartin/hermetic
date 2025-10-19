@@ -12,9 +12,11 @@ hermetic = "hermetic.cli:main"
 
 [dependency-groups]
 dev = [
+    "pytest-asyncio",
     "httpie",
     "pytest>=6.0.1",
     "pytest-cov>=2.10.1",
+    "pytest-timeout>=2.4.0",
     "pylint",
 
     "git2md; python_version >= '3.10'",

@@ -1,49 +1,75 @@
-# hermetic/guards/subprocess_guards.py
+# hermetic/guards/subprocess_guard.py
 from __future__ import annotations
 import os
 import subprocess
 import asyncio
+import sys
+from textwrap import dedent
+from typing import Any, Never
+
 from ..errors import PolicyViolation
 
 _originals: dict[str, object] = {}
 _installed = False
 
-def install(*, trace: bool = False):
+def install(*, trace: bool = False)->None:
     global _installed
     if _installed:
         return
     _installed = True
-    for name in ("Popen", "run", "call", "check_output"):
-        _originals[name] = getattr(subprocess, name)
-    _originals["system"] = os.system
-    _originals["create_subprocess_exec"] = asyncio.create_subprocess_exec
-    _originals["create_subprocess_shell"] = asyncio.create_subprocess_shell
 
-    def _trace(msg: str):
+    targets = {
+        subprocess: ("Popen", "run", "call", "check_output"),
+        os: ("system", "execv", "execve", "execl", "execle", "execlp", "execlpe", "execvp", "execvpe", "fork", "forkpty", "spawnl", "spawnle", "spawnlp", "spawnlpe", "spawnv", "spawnve", "spawnvp", "spawnvpe"),
+        asyncio: ("create_subprocess_exec", "create_subprocess_shell"),
+    }
+
+    for mod, funcs in targets.items():
+        for name in funcs:
+            if hasattr(mod, name):
+                _originals[f"{mod.__name__}.{name}"] = getattr(mod, name)
+
+    def _trace(msg: str)->None:
         if trace:
             print(f"[hermetic] {msg}", flush=True)
 
-    def _raise(*a, **k):
+    def _raise(*a:Any, **k:Any)->Never:
         _trace("blocked subprocess reason=no-subprocess")
         raise PolicyViolation("subprocess disabled")
 
-    subprocess.Popen = _raise  # type: ignore[assignment]
-    subprocess.run = _raise  # type: ignore[assignment]
-    subprocess.call = _raise  # type: ignore[assignment]
-    subprocess.check_output = _raise  # type: ignore[assignment]
-    os.system = _raise  # type: ignore[assignment]
-    asyncio.create_subprocess_exec = _raise  # type: ignore[assignment]
-    asyncio.create_subprocess_shell = _raise  # type: ignore[assignment]
+    for mod, funcs in targets.items():
+        for name in funcs:
+            if hasattr(mod, name):
+                setattr(mod, name, _raise)
 
-def uninstall():
+
+def uninstall()->None:
     global _installed
     if not _installed:
         return
-    subprocess.Popen = _originals["Popen"]  # type: ignore[assignment]
-    subprocess.run = _originals["run"]  # type: ignore[assignment]
-    subprocess.call = _originals["call"]  # type: ignore[assignment]
-    subprocess.check_output = _originals["check_output"]  # type: ignore[assignment]
-    os.system = _originals["system"]  # type: ignore[assignment]
-    asyncio.create_subprocess_exec = _originals["create_subprocess_exec"]  # type: ignore[assignment]
-    asyncio.create_subprocess_shell = _originals["create_subprocess_shell"]  # type: ignore[assignment]
+    for key, original_func in _originals.items():
+        mod_name, func_name = key.split('.', 1)
+        mod = sys.modules[mod_name]
+        setattr(mod, func_name, original_func)
     _installed = False
+    _originals.clear()
+
+# --- Code for bootstrap.py generation ---
+BOOTSTRAP_CODE = dedent(r"""
+# --- subprocess ---
+if cfg.get("no_subprocess"):
+    def _deny_exec(*a,**k): _tr("blocked subprocess reason=no-subprocess"); raise _HPolicy("subprocess disabled")
+    targets = {
+        "subprocess": ("Popen", "run", "call", "check_output"),
+        "os": ("system", "execv", "execve", "execl", "execle", "execlp", "execlpe", "execvp", "execvpe", "fork", "forkpty", "spawnl", "spawnle", "spawnlp", "spawnlpe", "spawnv", "spawnve", "spawnvp", "spawnvpe"),
+        "asyncio": ("create_subprocess_exec", "create_subprocess_shell"),
+    }
+    for mod_name, funcs in targets.items():
+        try:
+            mod = __import__(mod_name)
+            for name in funcs:
+                if hasattr(mod, name):
+                    setattr(mod, name, _deny_exec)
+        except ImportError:
+            pass
+""")
