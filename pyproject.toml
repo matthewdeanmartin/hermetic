@@ -1,5 +1,5 @@
 [project]
-name = "hermetic"
+name = "hermetic-seal"
 version = "0.1.0"
 description = "User-space sandbox runner for Python console scripts"
 authors = [{ name = "Matthew Dean Martin" }]
