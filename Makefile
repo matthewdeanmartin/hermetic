@@ -156,7 +156,7 @@ core_all_tests:
 	uv sync
 
 update_dev_status:
-	troml-dev-status update .
+	echo "troml-dev-status update . is not 3.14 ready!"
 
 dog_food:
 	troml-dev-status validate .
