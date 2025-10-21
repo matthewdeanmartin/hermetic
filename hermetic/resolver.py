@@ -1,5 +1,6 @@
 # hermetic/resolver.py
 from __future__ import annotations
+
 import importlib
 import importlib.metadata
 import os
@@ -7,10 +8,12 @@ import re
 import runpy
 import sys
 from dataclasses import dataclass
-from typing import Optional, Tuple, Any
+from typing import Any, Optional, Tuple
+
 from .util import which
 
 SHEBANG_RE = re.compile(r"^#!\s*(\S+)(?:\s+.*)?$")
+
 
 @dataclass
 class TargetSpec:
@@ -19,6 +22,7 @@ class TargetSpec:
     mode: str  # "inprocess" or "bootstrap"
     exe_path: Optional[str] = None
     interp_path: Optional[str] = None
+
 
 def _console_entry(name: str) -> Optional[Tuple[str, str]]:
     eps = importlib.metadata.entry_points()
@@ -35,6 +39,7 @@ def _console_entry(name: str) -> Optional[Tuple[str, str]]:
             return m, a
     return None
 
+
 def _script_shebang(exe: str) -> Optional[str]:
     try:
         with open(exe, "rb") as f:
@@ -43,6 +48,7 @@ def _script_shebang(exe: str) -> Optional[str]:
         return m.group(1) if m else None
     except Exception:
         return None
+
 
 def resolve(target: str) -> TargetSpec:
     # module:attr shortcut
@@ -56,10 +62,16 @@ def resolve(target: str) -> TargetSpec:
         exe = which(target)
         if exe:
             sheb = _script_shebang(exe)
-            same = os.path.realpath(sys.executable) == os.path.realpath(sheb or sys.executable)
-            return TargetSpec(module=ep[0], attr=ep[1],
-                              mode=("inprocess" if same else "bootstrap"),
-                              exe_path=exe, interp_path=sheb or sys.executable)
+            same = os.path.realpath(sys.executable) == os.path.realpath(
+                sheb or sys.executable
+            )
+            return TargetSpec(
+                module=ep[0],
+                attr=ep[1],
+                mode=("inprocess" if same else "bootstrap"),
+                exe_path=exe,
+                interp_path=sheb or sys.executable,
+            )
         return TargetSpec(module=ep[0], attr=ep[1], mode="inprocess")
 
     # NEW: arbitrary PATH executable handling (python, py.exe, or any python-shebang script)
@@ -70,13 +82,19 @@ def resolve(target: str) -> TargetSpec:
         looks_like_python = name in {"python", "python.exe", "py", "py.exe"}
         if looks_like_python or (sheb and "python" in os.path.basename(sheb).lower()):
             # We can bootstrap by injecting sitecustomize.
-            return TargetSpec(module="", attr="__main__", mode="bootstrap",
-                              exe_path=exe, interp_path=sheb or exe)
+            return TargetSpec(
+                module="",
+                attr="__main__",
+                mode="bootstrap",
+                exe_path=exe,
+                interp_path=sheb or exe,
+            )
 
     # module as script (fallback)
     return TargetSpec(module=target, attr="__main__", mode="inprocess")
 
-def invoke_inprocess(spec: TargetSpec)->dict[Any,Any]:
+
+def invoke_inprocess(spec: TargetSpec) -> dict[Any, Any]:
     sys.modules.pop(spec.module, None)  # ensure fresh import after guards
     if spec.attr == "__main__":
         return runpy.run_module(spec.module, run_name="__main__")

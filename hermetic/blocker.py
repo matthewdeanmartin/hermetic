@@ -1,10 +1,10 @@
 # hermetic/blocker.py
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Iterable, List, Optional, Any
-from contextlib import ContextDecorator, AbstractAsyncContextManager
-import asyncio
+
 import threading
+from contextlib import AbstractAsyncContextManager, ContextDecorator
+from dataclasses import dataclass, field
+from typing import Any, Iterable, List, Optional
 
 from .guards import install_all, uninstall_all
 
@@ -13,13 +13,14 @@ from .guards import install_all, uninstall_all
 _LOCK = threading.RLock()
 _REFCOUNT = 0
 
+
 @dataclass
 class BlockConfig:
     block_network: bool = False
     block_subprocess: bool = False
     fs_readonly: bool = False
     fs_root: Optional[str] = None
-    strict_imports: bool = False
+    block_native: bool = False
     allow_localhost: bool = False
     allow_domains: List[str] = field(default_factory=list)
     trace: bool = False
@@ -34,7 +35,7 @@ class BlockConfig:
             "no_subprocess": "block_subprocess",
             "fs_readonly": "fs_readonly",
             "fs_root": "fs_root",
-            "strict_imports": "strict_imports",
+            "block_native": "block_native",
             "allow_localhost": "allow_localhost",
             "allow_domains": "allow_domains",
             "trace": "trace",
@@ -56,32 +57,47 @@ class _HermeticBlocker(ContextDecorator, AbstractAsyncContextManager):
       - Safe to nest; guards are installed once and reference-counted.
       - Async-compatible: `async with hermetic_blocker(...): ...`
     """
+
     __slots__ = ("cfg", "_entered")
 
-    def __init__(self, cfg: BlockConfig)->None:
+    def __init__(self, cfg: BlockConfig) -> None:
         self.cfg = cfg
         self._entered = False
 
     # ---- sync protocol ----
-    def __enter__(self)->"_HermeticBlocker":
+    def __enter__(self) -> "_HermeticBlocker":
         global _REFCOUNT
         with _LOCK:
             if _REFCOUNT == 0:
                 install_all(
-                    net=(dict(
-                        allow_localhost=self.cfg.allow_localhost,
-                        allow_domains=self.cfg.allow_domains,
-                        trace=self.cfg.trace,
-                    ) if self.cfg.block_network else None),
-                    subproc=(dict(trace=self.cfg.trace) if self.cfg.block_subprocess else None),
-                    fs=(dict(fs_root=self.cfg.fs_root, trace=self.cfg.trace) if self.cfg.fs_readonly else None),
-                    imports=(dict(trace=self.cfg.trace) if self.cfg.strict_imports else None),
+                    net=(
+                        dict(
+                            allow_localhost=self.cfg.allow_localhost,
+                            allow_domains=self.cfg.allow_domains,
+                            trace=self.cfg.trace,
+                        )
+                        if self.cfg.block_network
+                        else None
+                    ),
+                    subproc=(
+                        dict(trace=self.cfg.trace)
+                        if self.cfg.block_subprocess
+                        else None
+                    ),
+                    fs=(
+                        dict(fs_root=self.cfg.fs_root, trace=self.cfg.trace)
+                        if self.cfg.fs_readonly
+                        else None
+                    ),
+                    imports=(
+                        dict(trace=self.cfg.trace) if self.cfg.block_native else None
+                    ),
                 )
             _REFCOUNT += 1
             self._entered = True
         return self
 
-    def __exit__(self, exc_type:Any, exc:Any, tb:Any)->None:
+    def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
         global _REFCOUNT
         with _LOCK:
             if self._entered:
@@ -93,11 +109,11 @@ class _HermeticBlocker(ContextDecorator, AbstractAsyncContextManager):
         return None
 
     # ---- async protocol ----
-    async def __aenter__(self)->"_HermeticBlocker":
+    async def __aenter__(self) -> "_HermeticBlocker":
         # Reuse sync enter; safe in async contexts
         return self.__enter__()
 
-    async def __aexit__(self, exc_type:Any, exc:Any, tb:Any)->None:
+    async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
         return self.__exit__(exc_type, exc, tb)
 
 
@@ -107,7 +123,7 @@ def hermetic_blocker(
     block_subprocess: bool = False,
     fs_readonly: bool = False,
     fs_root: Optional[str] = None,
-    strict_imports: bool = False,
+    block_native: bool = False,
     allow_localhost: bool = False,
     allow_domains: Iterable[str] = (),
     trace: bool = False,
@@ -129,7 +145,7 @@ def hermetic_blocker(
         block_subprocess=block_subprocess,
         fs_readonly=fs_readonly,
         fs_root=fs_root,
-        strict_imports=strict_imports,
+        block_native=block_native,
         allow_localhost=allow_localhost,
         allow_domains=list(allow_domains or ()),
         trace=trace,
@@ -138,7 +154,7 @@ def hermetic_blocker(
 
 
 # Optional convenience decorator with arguments name parity
-def with_hermetic(**kwargs:Any) -> _HermeticBlocker:
+def with_hermetic(**kwargs: Any) -> _HermeticBlocker:
     """
     Decorator factory mirroring hermetic_blocker kwargs.
 

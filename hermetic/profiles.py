@@ -1,7 +1,9 @@
 # hermetic/profiles.py
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import List
+
 
 @dataclass
 class GuardConfig:
@@ -9,17 +11,20 @@ class GuardConfig:
     no_subprocess: bool = False
     fs_readonly: bool = False
     fs_root: str | None = None
-    strict_imports: bool = False
+    block_native: bool = False
     allow_localhost: bool = False
     allow_domains: List[str] = field(default_factory=list)
     trace: bool = False
 
+
 PROFILES: dict[str, GuardConfig] = {
+    "block-all": GuardConfig(block_native=True,no_subprocess=True,no_network=True,fs_readonly=True),
     "net-hermetic": GuardConfig(no_network=True, allow_localhost=True),
     "exec-deny": GuardConfig(no_subprocess=True),
     "fs-readonly": GuardConfig(fs_readonly=True),
-    "strict-imports": GuardConfig(strict_imports=True),
+    "block-native": GuardConfig(block_native=True),
 }
+
 
 def apply_profile(base: GuardConfig, name: str) -> GuardConfig:
     prof = PROFILES.get(name)

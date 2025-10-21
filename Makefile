@@ -155,11 +155,12 @@ core_all_tests:
 	uv sync
 
 update_dev_status:
-	python -m hermetic update .
+	troml-dev-status update .
 
 dog_food:
 	troml-dev-status validate .
 	metametameta sync-check
+	jiggle_version check
 	# troml-dev-status --totalhelp
 	# bitrab
 	# pycodetags <command?>

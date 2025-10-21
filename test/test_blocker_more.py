@@ -8,11 +8,10 @@ Import Order: All imports that might be patched (os, subprocess, etc.) must happ
 AFTER the hermetic_blocker context is entered. This matches the real use case where
 the developer controls the entrypoint and import order.
 """
+
 from __future__ import annotations
 
-import asyncio
 import socket
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,12 +21,13 @@ from hermetic.blocker import BlockConfig, hermetic_blocker, with_hermetic
 from hermetic.errors import PolicyViolation
 
 if TYPE_CHECKING:
-    from _pytest.tmpdir import TempPathFactory
+    pass
 
 
 # ============================================================================
 # Network Guard Tests
 # ============================================================================
+
 
 class TestNetworkGuard:
     """Test network blocking via hermetic_blocker context manager."""
@@ -36,6 +36,7 @@ class TestNetworkGuard:
         """Verify socket.connect raises PolicyViolation when network blocked."""
         with hermetic_blocker(block_network=True):
             import socket
+
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             with pytest.raises(PolicyViolation, match="network disabled"):
                 sock.connect(("example.com", 80))
@@ -51,6 +52,7 @@ class TestNetworkGuard:
         with hermetic_blocker(block_network=True):
             with pytest.raises(PolicyViolation, match="network disabled"):
                 import socket
+
                 socket.getaddrinfo("example.com", 80)
 
     def test_network_allow_localhost(self) -> None:
@@ -58,6 +60,7 @@ class TestNetworkGuard:
         with hermetic_blocker(block_network=True, allow_localhost=True):
             # Should not raise - localhost is allowed
             import socket
+
             info = socket.getaddrinfo("localhost", 80)
             assert len(info) > 0
 
@@ -66,6 +69,7 @@ class TestNetworkGuard:
         with hermetic_blocker(block_network=True, allow_domains=["example.com"]):
             # Should not raise - example.com is allowed
             import socket
+
             info = socket.getaddrinfo("example.com", 80)
             assert len(info) > 0
 
@@ -74,6 +78,7 @@ class TestNetworkGuard:
         with hermetic_blocker(block_network=True, allow_localhost=True):
             with pytest.raises(PolicyViolation):
                 import socket
+
                 socket.getaddrinfo("169.254.169.254", 80)
 
     def test_network_unblocked_after_exit(self) -> None:
@@ -82,6 +87,7 @@ class TestNetworkGuard:
             pass
         # Should work fine now
         import socket
+
         info = socket.getaddrinfo("example.com", 80)
         assert len(info) > 0
 
@@ -89,14 +95,17 @@ class TestNetworkGuard:
         """Verify nested contexts maintain blocking until outermost exits."""
         with hermetic_blocker(block_network=True):
             import socket
+
             with hermetic_blocker(block_network=True):
                 import socket
+
                 with pytest.raises(PolicyViolation):
                     socket.getaddrinfo("example.com", 80)
             # Still blocked - outer context still active
             with pytest.raises(PolicyViolation):
                 socket.getaddrinfo("example.com", 80)
         import socket
+
         # Now unblocked
         info = socket.getaddrinfo("example.com", 80)
         assert len(info) > 0
@@ -106,6 +115,7 @@ class TestNetworkGuard:
 # Subprocess Guard Tests
 # ============================================================================
 
+
 class TestSubprocessGuard:
     """Test subprocess blocking."""
 
@@ -114,6 +124,7 @@ class TestSubprocessGuard:
         with hermetic_blocker(block_subprocess=True):
             with pytest.raises(PolicyViolation, match="subprocess disabled"):
                 import subprocess
+
                 subprocess.Popen(["echo", "hello"])
 
     def test_subprocess_run_blocked(self) -> None:
@@ -121,6 +132,7 @@ class TestSubprocessGuard:
         with hermetic_blocker(block_subprocess=True):
             with pytest.raises(PolicyViolation, match="subprocess disabled"):
                 import subprocess
+
                 subprocess.run(["echo", "hello"])
 
     def test_subprocess_call_blocked(self) -> None:
@@ -128,12 +140,14 @@ class TestSubprocessGuard:
         with hermetic_blocker(block_subprocess=True):
             with pytest.raises(PolicyViolation, match="subprocess disabled"):
                 import subprocess
+
                 subprocess.call(["echo", "hello"])
 
     def test_os_system_blocked(self) -> None:
         """Verify os.system raises PolicyViolation."""
         with hermetic_blocker(block_subprocess=True):
             import os  # Import AFTER guard installation
+
             with pytest.raises(PolicyViolation, match="subprocess disabled"):
                 os.system("echo hello")
 
@@ -143,7 +157,8 @@ class TestSubprocessGuard:
         with hermetic_blocker(block_subprocess=True):
             with pytest.raises(PolicyViolation, match="subprocess disabled"):
                 import asyncio
-                await asyncio.create_subprocess_exec("bash",  "-c", '"echo hello"')
+
+                await asyncio.create_subprocess_exec("bash", "-c", '"echo hello"')
 
     def test_subprocess_unblocked_after_exit(self) -> None:
         """Verify subprocess works after context exit."""
@@ -151,13 +166,15 @@ class TestSubprocessGuard:
             pass
         # Should work now
         import subprocess
-        result = subprocess.run(["bash",  "-c", "echo"], capture_output=True, text=True)
+
+        result = subprocess.run(["bash", "-c", "echo"], capture_output=True, text=True)
         assert result.returncode == 0
 
 
 # ============================================================================
 # Filesystem Guard Tests
 # ============================================================================
+
 
 class TestFilesystemGuard:
     """Test filesystem readonly blocking."""
@@ -198,6 +215,7 @@ class TestFilesystemGuard:
         test_file.write_text("content")
         with hermetic_blocker(fs_readonly=True):
             import os  # Import after guard installation
+
             with pytest.raises(PolicyViolation, match="mutation disabled"):
                 os.remove(str(test_file))
 
@@ -206,6 +224,7 @@ class TestFilesystemGuard:
         new_dir = tmp_path / "newdir"
         with hermetic_blocker(fs_readonly=True):
             import os  # Import after guard installation
+
             with pytest.raises(PolicyViolation, match="mutation disabled"):
                 os.mkdir(str(new_dir))
 
@@ -240,39 +259,47 @@ class TestFilesystemGuard:
 # Import Guard Tests
 # ============================================================================
 
+
 class TestImportGuard:
     """Test strict imports blocking."""
 
     def test_ctypes_import_blocked(self) -> None:
         """Verify ctypes import raises PolicyViolation."""
-        with hermetic_blocker(strict_imports=True):
+        with hermetic_blocker(block_native=True):
             with pytest.raises(PolicyViolation, match="import blocked"):
-                import ctypes
+                import cffi
+
+                assert dir(cffi)
 
     def test_cffi_import_blocked(self) -> None:
         """Verify cffi import raises PolicyViolation (if installed)."""
-        with hermetic_blocker(strict_imports=True):
+        with hermetic_blocker(block_native=True):
             with pytest.raises((PolicyViolation, ModuleNotFoundError)):
                 import cffi
 
+                assert dir(cffi)
+
     def test_normal_imports_allowed(self) -> None:
         """Verify normal pure-Python imports work."""
-        with hermetic_blocker(strict_imports=True):
-            import json
+        with hermetic_blocker(block_native=True):
             import collections
+            import json
+
             assert json and collections
 
     def test_imports_unblocked_after_exit(self) -> None:
         """Verify imports work after context exit."""
-        with hermetic_blocker(strict_imports=True):
+        with hermetic_blocker(block_native=True):
             pass
         import ctypes
+
         assert ctypes
 
 
 # ============================================================================
 # Multi-Guard Tests
 # ============================================================================
+
 
 class TestMultipleGuards:
     """Test multiple guards active simultaneously."""
@@ -284,7 +311,7 @@ class TestMultipleGuards:
             block_network=True,
             block_subprocess=True,
             fs_readonly=True,
-            strict_imports=True,
+            block_native=True,
         ):
             # Network blocked
             with pytest.raises(PolicyViolation):
@@ -292,13 +319,16 @@ class TestMultipleGuards:
             # Subprocess blocked
             with pytest.raises(PolicyViolation):
                 import subprocess
+
                 subprocess.run(["echo", "hello"])
             # Filesystem writes blocked
             with pytest.raises(PolicyViolation):
                 open(test_file, "w")
             # FFI imports blocked
             with pytest.raises(PolicyViolation):
-                import ctypes
+                import cffi
+
+                assert dir(cffi)
 
     def test_partial_guards(self) -> None:
         """Verify only specified guards are active."""
@@ -306,9 +336,11 @@ class TestMultipleGuards:
             # Network blocked
             with pytest.raises(PolicyViolation):
                 import socket
+
                 socket.getaddrinfo("example.com", 80)
             # Subprocess still works
             import subprocess
+
             result = subprocess.run(["bash", "-c", "echo"], capture_output=True)
             assert result.returncode == 0
 
@@ -316,6 +348,7 @@ class TestMultipleGuards:
 # ============================================================================
 # Configuration Tests
 # ============================================================================
+
 
 class TestBlockConfig:
     """Test BlockConfig dataclass."""
@@ -326,7 +359,7 @@ class TestBlockConfig:
             block_network=True,
             block_subprocess=True,
             fs_readonly=True,
-            strict_imports=True,
+            block_native=True,
             allow_localhost=True,
             allow_domains=["example.com"],
             trace=True,
@@ -334,7 +367,7 @@ class TestBlockConfig:
         assert cfg.block_network is True
         assert cfg.block_subprocess is True
         assert cfg.fs_readonly is True
-        assert cfg.strict_imports is True
+        assert cfg.block_native is True
         assert cfg.allow_localhost is True
         assert cfg.allow_domains == ["example.com"]
         assert cfg.trace is True
@@ -358,14 +391,17 @@ class TestBlockConfig:
 # Decorator Tests
 # ============================================================================
 
+
 class TestDecorators:
     """Test decorator usage of hermetic_blocker."""
 
     def test_decorator_blocks_network(self) -> None:
         """Verify decorator form blocks network."""
+
         @hermetic_blocker(block_network=True)
         def make_request() -> None:
             import socket
+
             socket.getaddrinfo("example.com", 80)
 
         with pytest.raises(PolicyViolation, match="network disabled"):
@@ -373,13 +409,16 @@ class TestDecorators:
 
     def test_with_hermetic_decorator(self) -> None:
         """Verify with_hermetic decorator factory works."""
+
         @with_hermetic(block_network=True, block_subprocess=True)
         def restricted_func() -> str:
             with pytest.raises(PolicyViolation):
                 import socket
+
                 socket.getaddrinfo("example.com", 80)
             with pytest.raises(PolicyViolation):
                 import subprocess
+
                 subprocess.run(["echo", "hello"])
             return "success"
 
@@ -387,15 +426,18 @@ class TestDecorators:
 
     def test_decorator_unblocks_after_function(self) -> None:
         """Verify guards are removed after decorated function completes."""
+
         @hermetic_blocker(block_network=True)
         def restricted() -> None:
             with pytest.raises(PolicyViolation):
                 import socket
+
                 socket.getaddrinfo("example.com", 80)
 
         restricted()
         # Should work now
         import socket
+
         info = socket.getaddrinfo("example.com", 80)
         assert len(info) > 0
 
@@ -403,6 +445,7 @@ class TestDecorators:
 # ============================================================================
 # Async Context Tests
 # ============================================================================
+
 
 class TestAsyncContext:
     """Test async context manager support."""
@@ -413,6 +456,7 @@ class TestAsyncContext:
         async with hermetic_blocker(block_network=True):
             with pytest.raises(PolicyViolation, match="network disabled"):
                 import socket
+
                 socket.getaddrinfo("example.com", 80)
 
     @pytest.mark.asyncio
@@ -421,6 +465,7 @@ class TestAsyncContext:
         async with hermetic_blocker(block_subprocess=True):
             with pytest.raises(PolicyViolation, match="subprocess disabled"):
                 import asyncio
+
                 await asyncio.create_subprocess_exec("echo", "hello")
 
     @pytest.mark.asyncio
@@ -430,6 +475,7 @@ class TestAsyncContext:
             pass
         # Should work now
         import socket
+
         info = socket.getaddrinfo("example.com", 80)
         assert len(info) > 0
 
@@ -437,6 +483,7 @@ class TestAsyncContext:
 # ============================================================================
 # Thread Safety Tests
 # ============================================================================
+
 
 class TestThreadSafety:
     """Test thread safety of guard installation."""
@@ -450,10 +497,13 @@ class TestThreadSafety:
                 with hermetic_blocker(block_network=True):
                     with pytest.raises(PolicyViolation):
                         import socket
+
                         socket.getaddrinfo("example.com", 80)
             except Exception as e:
                 errors.append(e)
+
         import threading
+
         threads = [threading.Thread(target=thread_func, args=(i,)) for i in range(10)]
         for t in threads:
             t.start()
@@ -469,27 +519,29 @@ class TestThreadSafety:
             # Network blocked
             with pytest.raises(PolicyViolation):
                 import socket
+
                 socket.getaddrinfo("example.com", 80)
             # Nested context
             with hermetic_blocker(block_network=True):
                 # Still blocked
                 with pytest.raises(PolicyViolation):
                     import socket
+
                     socket.getaddrinfo("example.com", 80)
             # Still blocked after nested exit
             with pytest.raises(PolicyViolation):
                 import socket
+
                 socket.getaddrinfo("example.com", 80)
         # Unblocked after all exits
         info = socket.getaddrinfo("example.com", 80)
         assert len(info) > 0
 
 
-
-
 # ============================================================================
 # Exception Handling Tests
 # ============================================================================
+
 
 class TestExceptionHandling:
     """Test that guards are properly removed even with exceptions."""
@@ -504,6 +556,7 @@ class TestExceptionHandling:
 
         # Guards should be removed
         import socket
+
         info = socket.getaddrinfo("example.com", 80)
         assert len(info) > 0
 
@@ -517,6 +570,7 @@ class TestExceptionHandling:
 # ============================================================================
 # Bug-Finding Tests (Expected Failures or Edge Cases)
 # ============================================================================
+
 
 class TestEdgeCases:
     """Tests designed to find potential bugs or edge cases."""
@@ -557,6 +611,7 @@ class TestEdgeCases:
             result = sock.connect_ex(("example.com", 80))
             # Should return an error code, not 0
             assert result != 0
+
     #
     # def test_fs_root_with_symlinks(self, tmp_path: Path) -> None:
     #     """Test fs_root handles symlinks correctly."""
@@ -590,6 +645,7 @@ class TestEdgeCases:
         blocker.__exit__(None, None, None)
         # Network should work
         import socket
+
         info = socket.getaddrinfo("example.com", 80)
         assert len(info) > 0
 

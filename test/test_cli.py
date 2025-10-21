@@ -1,8 +1,9 @@
 # tests/test_cli.py
-import pytest
-import argparse
-from hermetic.cli import build_parser, parse_hermetic_args, main
+
+
+from hermetic.cli import parse_hermetic_args
 from hermetic.profiles import GuardConfig
+
 
 # def test_build_parser():
 #     parser = build_parser()
@@ -19,11 +20,12 @@ def test_parse_hermetic_args():
         no_subprocess=True,
         fs_readonly=False,
         fs_root=None,
-        strict_imports=False,
+        block_native=False,
         allow_localhost=False,
         allow_domains=["example.com"],
-        trace=True
+        trace=True,
     )
+
 
 def test_parse_hermetic_args_with_profile():
     argv = ["--profile=net-hermetic", "--no-subprocess"]
@@ -31,6 +33,7 @@ def test_parse_hermetic_args_with_profile():
     assert cfg.no_network is True
     assert cfg.allow_localhost is True
     assert cfg.no_subprocess is True
+
 
 # def test_main_help(capsys):
 #     exit_code = main(["--help"])

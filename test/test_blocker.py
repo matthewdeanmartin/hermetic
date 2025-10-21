@@ -1,8 +1,9 @@
 # tests/test_blocker.py
+
 import pytest
-import asyncio
-from hermetic.blocker import BlockConfig, hermetic_blocker, _HermeticBlocker, _REFCOUNT
-from hermetic.guards import install_all, uninstall_all
+
+from hermetic.blocker import _REFCOUNT, BlockConfig, hermetic_blocker
+
 
 def test_block_config_from_kwargs(default_block_config):
     cfg = BlockConfig.from_kwargs(block_network=True, allow_localhost=True)
@@ -16,6 +17,7 @@ def test_block_config_from_kwargs(default_block_config):
 
     with pytest.raises(TypeError, match="Unknown argument: invalid"):
         BlockConfig.from_kwargs(invalid=True)
+
 
 # def test_hermetic_blocker_context_manager(default_block_config):
 #     global _REFCOUNT
@@ -45,10 +47,12 @@ def test_block_config_from_kwargs(default_block_config):
 #         assert _REFCOUNT == initial_refcount + 1
 #     assert _REFCOUNT == initial_refcount
 
+
 def test_with_hermetic_decorator():
     @hermetic_blocker(block_network=True)
     def test_func():
         return True
+
     global _REFCOUNT
     initial_refcount = _REFCOUNT
     assert test_func() is True

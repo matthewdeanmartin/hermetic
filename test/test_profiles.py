@@ -1,9 +1,12 @@
 # tests/test_profiles.py
 import pytest
-from hermetic.profiles import GuardConfig, apply_profile, PROFILES
+
+from hermetic.profiles import GuardConfig, apply_profile
+
 
 def test_guard_config_defaults(default_guard_config):
     assert default_guard_config == GuardConfig()
+
 
 def test_apply_profile():
     base = GuardConfig()

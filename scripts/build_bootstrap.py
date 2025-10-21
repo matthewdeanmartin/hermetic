@@ -13,18 +13,13 @@ To run: `python scripts/build_bootstrap.py` from the project root.
 """
 import os
 import sys
-from textwrap import dedent
 
 # Add project root to the path to allow importing 'hermetic'
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
-from hermetic.guards import (
-    filesystem,
-    imports_guard,
-    network,
-    subprocess_guard,
-)
+from hermetic.guards import (filesystem, imports_guard, network,  # noqa
+                             subprocess_guard)
 
 # Template for the final bootstrap.py file
 # The {guards_code} placeholder will be filled with the concatenated

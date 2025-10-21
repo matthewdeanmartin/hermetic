@@ -1,12 +1,13 @@
 # tests/test_resolver.py
-import pytest
-import os
-import sys
-from hermetic.resolver import resolve, TargetSpec
+
+
+from hermetic.resolver import TargetSpec, resolve
+
 
 def test_resolve_module_attr():
     spec = resolve("module:attr")
     assert spec == TargetSpec(module="module", attr="attr", mode="inprocess")
+
 
 # def test_resolve_script(tmp_path):
 #     script = tmp_path / "script.py"
@@ -16,6 +17,7 @@ def test_resolve_module_attr():
 #     assert spec.attr == "__main__"
 #     assert spec.mode == "bootstrap"
 #     assert spec.exe_path == str(script)
+
 
 def test_resolve_module_fallback():
     spec = resolve("mymodule")

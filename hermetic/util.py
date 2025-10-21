@@ -1,18 +1,22 @@
 # hermetic/utilmake_prompt.sh
 # make_source.sh.py
 from __future__ import annotations
+
 import os
-import sys
 import shutil
+import sys
 from dataclasses import dataclass
 from typing import List
+
 
 @dataclass(frozen=True)
 class SplitArgs:
     hermetic_argv: List[str]
     target_argv: List[str]
 
+
 _HELP_TOKENS = {"-h", "--help", "--version"}
+
 
 def split_argv(argv: list[str]) -> SplitArgs:
     """
@@ -32,6 +36,7 @@ def split_argv(argv: list[str]) -> SplitArgs:
 
     raise SystemExit("usage error: separate hermetic and target args with `--`")
 
+
 def is_same_interpreter(exe_path: str) -> bool:
     # Compare normalized sys.executable with resolved shebang interpreter path.
     try:
@@ -40,6 +45,7 @@ def is_same_interpreter(exe_path: str) -> bool:
         return here == there
     except Exception:
         return False
+
 
 def which(exe_name: str) -> str | None:
     return shutil.which(exe_name)

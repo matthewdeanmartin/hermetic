@@ -1,7 +1,9 @@
 # tests/conftest.py
 import pytest
-from hermetic.profiles import GuardConfig
+
 from hermetic.blocker import BlockConfig
+from hermetic.profiles import GuardConfig
+
 
 @pytest.fixture
 def default_block_config():
@@ -10,11 +12,12 @@ def default_block_config():
         block_subprocess=False,
         fs_readonly=False,
         fs_root=None,
-        strict_imports=False,
+        block_native=False,
         allow_localhost=False,
         allow_domains=[],
-        trace=False
+        trace=False,
     )
+
 
 @pytest.fixture
 def default_guard_config():
@@ -23,8 +26,8 @@ def default_guard_config():
         no_subprocess=False,
         fs_readonly=False,
         fs_root=None,
-        strict_imports=False,
+        block_native=False,
         allow_localhost=False,
         allow_domains=[],
-        trace=False
+        trace=False,
     )

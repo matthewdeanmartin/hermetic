@@ -11,12 +11,13 @@ Examples:
 """
 
 from __future__ import annotations
-import sys
+
 import argparse
 import importlib
 import importlib.metadata
 import runpy
 import socket
+import sys
 import types
 from typing import Iterable, Sequence, Set
 

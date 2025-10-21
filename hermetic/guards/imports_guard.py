@@ -1,5 +1,6 @@
 # hermetic/guards/imports_guard.py
 from __future__ import annotations
+
 import builtins
 import importlib.machinery as mach
 from textwrap import dedent
@@ -11,6 +12,7 @@ _installed = False
 _originals: dict[str, Any] = {}
 
 _DENY_NAMES = {"ctypes", "cffi"}
+
 
 def install(*, trace: bool = False):
     """Deny native extension imports and FFI modules."""
@@ -39,6 +41,7 @@ def install(*, trace: bool = False):
     mach.ExtensionFileLoader = GuardedExtLoader  # type: ignore[assignment]
     builtins.__import__ = guarded_import  # type: ignore[assignment]
 
+
 def uninstall():
     global _installed
     if not _installed:
@@ -47,10 +50,12 @@ def uninstall():
     builtins.__import__ = _originals["__import__"]  # type: ignore[assignment]
     _installed = False
 
+
 # --- Code for bootstrap.py generation ---
-BOOTSTRAP_CODE = dedent(r"""
+BOOTSTRAP_CODE = dedent(
+    r"""
 # --- strict imports ---
-if cfg.get("strict_imports"):
+if cfg.get("block_native"):
     _origExt = mach.ExtensionFileLoader
     _origImp = builtins.__import__
     def _trimp(n): _tr(f"blocked import name={n}")
@@ -62,4 +67,5 @@ if cfg.get("strict_imports"):
         return _origImp(name, globals, locals, fromlist, level)
     mach.ExtensionFileLoader = GuardedExtLoader
     builtins.__import__ = guarded_import
-""")
+"""
+)

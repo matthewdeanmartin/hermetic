@@ -59,7 +59,7 @@ hermetic [HERMETIC_OPTS] -- <TARGET> [TARGET_ARGS...]
   Shorthand bundles (e.g., `net-hermetic`, `exec-deny`, `fs-readonly`).
 * `--trace`
   Log blocked calls and decisions to `stderr`.
-* `--strict-imports`
+* `--block-native`
   Deny loading native extensions (`.so/.pyd`) and FFI modules (`ctypes`, `cffi`).
 
 Non-normative future flags: `--env-scrub`, `--deny-host`, `--deny-ip`, `--clock-freeze`, etc.
@@ -124,7 +124,7 @@ Two execution modes are required:
 
     * Forbid write modes in `builtins.open`, `pathlib.Path.open`, `os.open` (+ write/rename/remove APIs).
     * MAY allow writes under a sandbox root (default: deny-all writes).
-* **Strict imports** (`--strict-imports`)
+* **No native interop** (`--block-native`)
 
     * Replace `importlib.machinery.ExtensionFileLoader` with a loader that raises on native modules.
     * Deny importing `ctypes`, `cffi` by name.
@@ -245,7 +245,7 @@ hermetic --no-network -- httpie.__main__ -- https://example.com
 * `net-hermetic` = `--no-network --allow-localhost`
 * `exec-deny`    = `--no-subprocess`
 * `fs-readonly`  = `--fs-readonly`
-* `strict-imports` = `--strict-imports`
+* `block-native` = `--block-native`
 
 ---
 

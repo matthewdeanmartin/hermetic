@@ -1,8 +1,8 @@
 # tests/test_runner.py
-import pytest
-from hermetic.runner import config_to_flags, run
+
 from hermetic.profiles import GuardConfig
-from hermetic.resolver import TargetSpec
+from hermetic.runner import config_to_flags, run
+
 
 def test_config_to_flags(default_guard_config):
     cfg = GuardConfig(no_network=True, allow_domains=["example.com"], trace=True)
@@ -12,11 +12,12 @@ def test_config_to_flags(default_guard_config):
         "no_subprocess": False,
         "fs_readonly": False,
         "fs_root": None,
-        "strict_imports": False,
+        "block_native": False,
         "allow_localhost": False,
         "allow_domains": ["example.com"],
-        "trace": True
+        "trace": True,
     }
+
 
 def test_run_inprocess(mocker):
     # Mock invoke_inprocess to avoid actual module execution

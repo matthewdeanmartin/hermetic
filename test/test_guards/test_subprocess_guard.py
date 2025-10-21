@@ -1,8 +1,11 @@
 # tests/test_guards/test_subprocess_guard.py
-import pytest
 import subprocess
-from hermetic.guards.subprocess_guard import install, uninstall
+
+import pytest
+
 from hermetic.errors import PolicyViolation
+from hermetic.guards.subprocess_guard import install, uninstall
+
 
 def test_subprocess_guard():
     install(trace=True)

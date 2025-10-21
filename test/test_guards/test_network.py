@@ -1,8 +1,11 @@
 # tests/test_guards/test_network.py
-import pytest
 import socket
-from hermetic.guards.network import install, uninstall
+
+import pytest
+
 from hermetic.errors import PolicyViolation
+from hermetic.guards.network import install, uninstall
+
 
 def test_network_guard():
     install(allow_localhost=True, allow_domains=["example.com"], trace=True)

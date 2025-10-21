@@ -1,10 +1,12 @@
 # hermetic/guards/network.py
 from __future__ import annotations
+
 import errno
 import socket
 import ssl
 from textwrap import dedent
-from typing import Iterable, Set, Tuple, Any, Never
+from typing import Any, Iterable, Never, Set
+
 from ..errors import PolicyViolation
 
 # State
@@ -13,14 +15,16 @@ _installed = False
 
 # Deny well-known cloud metadata endpoints even if DNS allowed
 _METADATA_HOSTS: Set[str] = {
-    "169.254.169.254",        # AWS/Azure metadata
-    "metadata.google.internal"  # GCP
+    "169.254.169.254",  # AWS/Azure metadata
+    "metadata.google.internal",  # GCP
 }
 
-_LOCALHOST = {"127.0.0.1", "::1", "localhost", "0.0.0.0"}
+_LOCALHOST = {"127.0.0.1", "::1", "localhost", "0.0.0.0"}  # nosec
 
 
-def install(*, allow_localhost: bool, allow_domains: Iterable[str], trace: bool = False)->None:
+def install(
+    *, allow_localhost: bool, allow_domains: Iterable[str], trace: bool = False
+) -> None:
     """
     Install a network guard that preserves socket.socket as a TYPE.
     """
@@ -37,7 +41,7 @@ def install(*, allow_localhost: bool, allow_domains: Iterable[str], trace: bool 
     _originals["getaddrinfo"] = socket.getaddrinfo
     _originals["wrap_socket"] = ssl.SSLContext.wrap_socket
 
-    def _trace(msg: str)->None:
+    def _trace(msg: str) -> None:
         if trace:
             print(f"[hermetic] {msg}", flush=True)
 
@@ -65,14 +69,14 @@ def install(*, allow_localhost: bool, allow_domains: Iterable[str], trace: bool 
             _trace(f"blocked socket.connect host={host} reason=no-network")
             raise PolicyViolation(f"network disabled: connect({host})")
 
-        def connect_ex(self, address:Any)->int:
+        def connect_ex(self, address: Any) -> int:
             host = _host_from(address)
             if _is_allowed(host):
                 return super().connect_ex(address)
             _trace(f"blocked socket.connect_ex host={host} reason=no-network")
             return errno.EACCES
 
-    def create_connection_guard(address:Any, *a:Any, **k:Any)->Never:
+    def create_connection_guard(address: Any, *a: Any, **k: Any) -> Never:
         host = _host_from(address)
         if _is_allowed(host):
             return _originals["create_connection"](address, *a, **k)
@@ -89,17 +93,17 @@ def install(*, allow_localhost: bool, allow_domains: Iterable[str], trace: bool 
         _trace("blocked ssl.SSLContext.wrap_socket reason=no-network")
         raise PolicyViolation("network disabled: TLS")
 
-    socket.socket = GuardedSocket # type: ignore[misc]
+    socket.socket = GuardedSocket  # type: ignore[misc]
     socket.create_connection = create_connection_guard
     socket.getaddrinfo = getaddrinfo_guard
     ssl.SSLContext.wrap_socket = wrap_socket_guard
 
 
-def uninstall()->None:
+def uninstall() -> None:
     global _installed
     if not _installed:
         return
-    socket.socket = _originals["socket_cls"] # type: ignore[misc]
+    socket.socket = _originals["socket_cls"]  # type: ignore[misc]
     socket.create_connection = _originals["create_connection"]
     socket.getaddrinfo = _originals["getaddrinfo"]
     ssl.SSLContext.wrap_socket = _originals["wrap_socket"]
@@ -107,7 +111,8 @@ def uninstall()->None:
 
 
 # --- Code for bootstrap.py generation ---
-BOOTSTRAP_CODE = dedent(r"""
+BOOTSTRAP_CODE = dedent(
+    r"""
 # --- network ---
 if cfg.get("no_network"):
     _orig_socket = socket.socket
@@ -118,7 +123,7 @@ if cfg.get("no_network"):
     ALLOW_LOCAL = bool(cfg.get("allow_localhost"))
     ALLOW_DOMAINS = set([d.lower() for d in cfg.get("allow_domains", []) if d])
     META = {"169.254.169.254", "metadata.google.internal"}
-    LOCAL = {"127.0.0.1","::1","localhost","0.0.0.0"}
+    LOCAL = {"127.0.0.1","::1","localhost","0.0.0.0"} # nosec
 
     def _host_from(addr):
         try:
@@ -158,4 +163,5 @@ if cfg.get("no_network"):
     socket.create_connection = _guard_create_connection
     socket.getaddrinfo = _guard_getaddrinfo
     ssl.SSLContext.wrap_socket = _guard_wrap_socket
-""")
+"""
+)
