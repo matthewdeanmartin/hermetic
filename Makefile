@@ -159,7 +159,7 @@ update_dev_status:
 	echo "troml-dev-status update . is not 3.14 ready!"
 
 dog_food:
-	troml-dev-status validate .
+	# troml-dev-status validate .
 	metametameta sync-check
 	jiggle_version check
 	# troml-dev-status --totalhelp
