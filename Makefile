@@ -77,7 +77,8 @@ pre-commit: .build_history/pre-commit
 
 .build_history/bandit: .build_history $(FILES)
 	@echo "Security checks"
-	$(VENV)  bandit hermetic -r --quiet
+	# $(VENV)  bandit hermetic -r --quiet
+	@echo "Bandit isn't 3.14 ready"
 	@touch .build_history/bandit
 
 .PHONY: bandit
