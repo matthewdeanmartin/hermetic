@@ -15,6 +15,7 @@ hermetic = "hermetic.cli:main"
 
 [dependency-groups]
 dev = [
+    "troml-dev-status",
     "jiggle_version",
     "cffi",
     "pytest-asyncio",
