@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/hermetic
+      url: https://pypi.org/p/hermetic-seal
     permissions:
       id-token: write
     needs: build
