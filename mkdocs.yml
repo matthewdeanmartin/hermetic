@@ -23,9 +23,19 @@ nav:
   - Installation: installation.md
   - Quick Start: quickstart.md
   - Basic Features:
-      - TBD
+      - CLI Usage: cli-usage.md
+      - Programmatic API: programmatic-api.md
+      - Profiles: profiles.md
+      - Network Guard: guards/network.md
+      - Subprocess Guard: guards/subprocess.md
+      - Filesystem Guard: guards/filesystem.md
+      - Native Imports Guard: guards/native-imports.md
   - Advanced:
-      - TBD
+      - Threat Model: threat-model.md
+      - Bootstrap Mode: bootstrap-mode.md
+      - Sealed Mode: sealed-mode.md
+      - Tracing and Debugging: tracing.md
+      - Testing Patterns: testing.md
   - Safety and Compliance:
       - Security: security.md
       - Dependency Provenance: dependency-provenance.md
