@@ -1,0 +1,36 @@
+site_name: hermetic-seal
+site_description: A best efforts sandbox
+site_url: https://hermetic.readthedocs.io/en/latest/
+repo_url: https://gitlab.com/matthewdeanmartin/hermetic
+repo_name: matthewdeanmartin/tuochat
+
+theme:
+  name: readthedocs
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [ "." ]
+          options:
+            show_source: false
+            show_root_heading: true
+            members_order: source
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quick Start: quickstart.md
+  - Basic Features:
+      - TBD
+  - Advanced:
+      - TBD
+  - Safety and Compliance:
+      - Security: security.md
+      - Dependency Provenance: dependency-provenance.md
+  - API Reference:
+      - Reference: api-reference.md
+  - Contributing:
+      - Contributing Guide: contributing/CONTRIBUTING.md
+      - AI Policy: contributing/AI.md

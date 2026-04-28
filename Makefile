@@ -1,7 +1,5 @@
 .EXPORT_ALL_VARIABLES:
-# Get changed files
 
-FILES := $(wildcard **/*.py)
 
 # if you wrap everything in uv run, it runs slower.
 ifeq ($(origin VIRTUAL_ENV),undefined)
@@ -36,13 +34,10 @@ test: clean uv.lock install_plugins
 #	$(VENV) bash basic_test_with_logging.sh
 
 
-.build_history:
-	@mkdir -p .build_history
 
-.build_history/isort: .build_history $(FILES)
+isort:
 	@echo "Formatting imports"
 	$(VENV) isort .
-	@touch .build_history/isort
 
 jiggle_version:
 ifeq ($(CI),true)
@@ -54,38 +49,28 @@ else
 	# jiggle_version bump --increment auto
 endif
 
-.PHONY: isort
-isort: .build_history/isort
-
-.build_history/black: .build_history .build_history/isort $(FILES) jiggle_version
+.PHONY: black
+black: isort jiggle_version
 	@echo "Formatting code"
 	$(VENV) metametameta pep621
 	$(VENV) black hermetic # --exclude .venv
 	$(VENV) black test # --exclude .venv
 	$(VENV) git2md hermetic --ignore __init__.py __pycache__ --output SOURCE.md
 
-.PHONY: black
-black: .build_history/black
-
-.build_history/pre-commit: .build_history .build_history/isort .build_history/black
+.PHONY: pre-commit
+pre-commit: isort black
 	@echo "Pre-commit checks"
 	$(VENV) pre-commit run --all-files
-	@touch .build_history/pre-commit
 
-.PHONY: pre-commit
-pre-commit: .build_history/pre-commit
-
-.build_history/bandit: .build_history $(FILES)
+.PHONY: bandit
+bandit:
 	@echo "Security checks"
 	# $(VENV)  bandit hermetic -r --quiet
 	@echo "Bandit isn't 3.14 ready"
 	@touch .build_history/bandit
 
-.PHONY: bandit
-bandit: .build_history/bandit
-
 .PHONY: pylint
-.build_history/pylint: .build_history .build_history/isort .build_history/black $(FILES)
+pylint: isort black
 	@echo "Linting with pylint"
 	$(VENV) ruff --fix
 	$(VENV) pylint hermetic --fail-under 9.8

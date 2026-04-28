@@ -12,6 +12,13 @@ from .guards import install_all, uninstall_all
 # Guards are global monkey-patches; we only uninstall when the outermost scope exits.
 _LOCK = threading.RLock()
 _REFCOUNT = 0
+_ACTIVE_CONFIGS: list["BlockConfig"] = []
+# Sealed latch: once set, _reapply_guards_locked() refuses to weaken the
+# active policy and refuses to uninstall. The latch is per-process and
+# never resets — opting in is an irreversible choice. Bypass requires
+# walking the module's attributes via gc/inspect, which raises the bar
+# above one-line removal.
+_SEALED = False
 
 
 @dataclass
@@ -24,6 +31,7 @@ class BlockConfig:
     allow_localhost: bool = False
     allow_domains: List[str] = field(default_factory=list)
     trace: bool = False
+    sealed: bool = False
 
     @classmethod
     def from_kwargs(cls, **kw) -> "BlockConfig":
@@ -39,6 +47,7 @@ class BlockConfig:
             "allow_localhost": "allow_localhost",
             "allow_domains": "allow_domains",
             "trace": "trace",
+            "sealed": "sealed",
         }
         data = {}
         for k, v in kw.items():
@@ -46,6 +55,61 @@ class BlockConfig:
                 raise TypeError(f"Unknown argument: {k}")
             data[mapping[k]] = v
         return cls(**data)
+
+    def merged_with(self, other: "BlockConfig") -> "BlockConfig":
+        return BlockConfig(
+            block_network=self.block_network or other.block_network,
+            block_subprocess=self.block_subprocess or other.block_subprocess,
+            fs_readonly=self.fs_readonly or other.fs_readonly,
+            fs_root=other.fs_root or self.fs_root,
+            block_native=self.block_native or other.block_native,
+            allow_localhost=self.allow_localhost or other.allow_localhost,
+            allow_domains=list(dict.fromkeys(self.allow_domains + other.allow_domains)),
+            trace=self.trace or other.trace,
+            sealed=self.sealed or other.sealed,
+        )
+
+
+def _effective_config() -> BlockConfig:
+    cfg = BlockConfig()
+    for item in _ACTIVE_CONFIGS:
+        cfg = cfg.merged_with(item)
+    return cfg
+
+
+def _install_for_config(cfg: BlockConfig) -> None:
+    install_all(
+        net=(
+            dict(
+                allow_localhost=cfg.allow_localhost,
+                allow_domains=cfg.allow_domains,
+                trace=cfg.trace,
+            )
+            if cfg.block_network
+            else None
+        ),
+        subproc=(dict(trace=cfg.trace) if cfg.block_subprocess else None),
+        fs=(dict(fs_root=cfg.fs_root, trace=cfg.trace) if cfg.fs_readonly else None),
+        imports=(
+            dict(
+                trace=cfg.trace,
+                block_subprocess_libs=cfg.block_subprocess,
+            )
+            if cfg.block_native
+            else None
+        ),
+    )
+
+
+def _reapply_guards_locked() -> None:
+    if _SEALED:
+        # In sealed mode, never uninstall; only widen / re-apply policy.
+        if _ACTIVE_CONFIGS:
+            _install_for_config(_effective_config())
+        return
+    uninstall_all()
+    if _ACTIVE_CONFIGS:
+        _install_for_config(_effective_config())
 
 
 class _HermeticBlocker(ContextDecorator, AbstractAsyncContextManager):
@@ -66,33 +130,12 @@ class _HermeticBlocker(ContextDecorator, AbstractAsyncContextManager):
 
     # ---- sync protocol ----
     def __enter__(self) -> "_HermeticBlocker":
-        global _REFCOUNT
+        global _REFCOUNT, _SEALED
         with _LOCK:
-            if _REFCOUNT == 0:
-                install_all(
-                    net=(
-                        dict(
-                            allow_localhost=self.cfg.allow_localhost,
-                            allow_domains=self.cfg.allow_domains,
-                            trace=self.cfg.trace,
-                        )
-                        if self.cfg.block_network
-                        else None
-                    ),
-                    subproc=(
-                        dict(trace=self.cfg.trace)
-                        if self.cfg.block_subprocess
-                        else None
-                    ),
-                    fs=(
-                        dict(fs_root=self.cfg.fs_root, trace=self.cfg.trace)
-                        if self.cfg.fs_readonly
-                        else None
-                    ),
-                    imports=(
-                        dict(trace=self.cfg.trace) if self.cfg.block_native else None
-                    ),
-                )
+            _ACTIVE_CONFIGS.append(self.cfg)
+            if self.cfg.sealed:
+                _SEALED = True
+            _reapply_guards_locked()
             _REFCOUNT += 1
             self._entered = True
         return self
@@ -103,8 +146,11 @@ class _HermeticBlocker(ContextDecorator, AbstractAsyncContextManager):
             if self._entered:
                 _REFCOUNT -= 1
                 self._entered = False
-                if _REFCOUNT == 0:
-                    uninstall_all()
+                try:
+                    _ACTIVE_CONFIGS.remove(self.cfg)
+                except ValueError:
+                    pass
+                _reapply_guards_locked()
         # don’t suppress exceptions
         return None
 
@@ -127,6 +173,7 @@ def hermetic_blocker(
     allow_localhost: bool = False,
     allow_domains: Iterable[str] = (),
     trace: bool = False,
+    sealed: bool = False,
 ) -> _HermeticBlocker:
     """
     Public constructor. Usage:
@@ -149,6 +196,7 @@ def hermetic_blocker(
         allow_localhost=allow_localhost,
         allow_domains=list(allow_domains or ()),
         trace=trace,
+        sealed=sealed,
     )
     return _HermeticBlocker(cfg)
 

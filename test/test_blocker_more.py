@@ -73,6 +73,12 @@ class TestNetworkGuard:
             info = socket.getaddrinfo("example.com", 80)
             assert len(info) > 0
 
+    def test_network_allow_domains_does_not_match_substrings(self) -> None:
+        """Allowlist should match exact hosts/subdomains, not arbitrary substrings."""
+        with hermetic_blocker(block_network=True, allow_domains=["example.com"]):
+            with pytest.raises(PolicyViolation, match="network disabled"):
+                socket.getaddrinfo("badexample.com", 80)
+
     def test_network_blocks_metadata_endpoints(self) -> None:
         """Verify cloud metadata endpoints are always blocked."""
         with hermetic_blocker(block_network=True, allow_localhost=True):
@@ -228,6 +234,23 @@ class TestFilesystemGuard:
             with pytest.raises(PolicyViolation, match="mutation disabled"):
                 os.mkdir(str(new_dir))
 
+    def test_path_touch_blocked(self, tmp_path: Path) -> None:
+        """Verify pathlib.Path.touch is treated as a filesystem mutation."""
+        test_file = tmp_path / "touch.txt"
+        with hermetic_blocker(fs_readonly=True):
+            with pytest.raises(PolicyViolation, match="mutation disabled"):
+                test_file.touch()
+
+    def test_utime_blocked(self, tmp_path: Path) -> None:
+        """Verify metadata writes are blocked too."""
+        test_file = tmp_path / "stamp.txt"
+        test_file.write_text("content")
+        with hermetic_blocker(fs_readonly=True):
+            import os
+
+            with pytest.raises(PolicyViolation, match="mutation disabled"):
+                os.utime(test_file, None)
+
     def test_fs_root_restricts_reads(self, tmp_path: Path) -> None:
         """Verify fs_root parameter restricts read access."""
         sandbox = tmp_path / "sandbox"
@@ -295,6 +318,14 @@ class TestImportGuard:
 
         assert ctypes
 
+    def test_preimported_ctypes_ffi_usage_blocked(self) -> None:
+        """Pre-imported ctypes should still lose its obvious FFI entry points."""
+        import ctypes
+
+        with hermetic_blocker(block_native=True):
+            with pytest.raises(PolicyViolation, match="native interface blocked"):
+                ctypes.CDLL(None)
+
 
 # ============================================================================
 # Multi-Guard Tests
@@ -343,6 +374,15 @@ class TestMultipleGuards:
 
             result = subprocess.run(["bash", "-c", "echo"], capture_output=True)
             assert result.returncode == 0
+
+    def test_nested_contexts_merge_stricter_guards(self) -> None:
+        """Inner contexts should add restrictions instead of being ignored."""
+        with hermetic_blocker(block_network=True):
+            with hermetic_blocker(block_subprocess=True):
+                with pytest.raises(PolicyViolation):
+                    import subprocess
+
+                    subprocess.run(["bash", "-c", "echo"], capture_output=True)
 
 
 # ============================================================================
@@ -611,6 +651,16 @@ class TestEdgeCases:
             result = sock.connect_ex(("example.com", 80))
             # Should return an error code, not 0
             assert result != 0
+
+    def test_udp_sendto_blocked(self) -> None:
+        """Unconnected datagram sends should still be blocked."""
+        with hermetic_blocker(block_network=True):
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                with pytest.raises(PolicyViolation, match="network disabled"):
+                    sock.sendto(b"hi", ("127.0.0.1", 9))
+            finally:
+                sock.close()
 
     #
     # def test_fs_root_with_symlinks(self, tmp_path: Path) -> None:

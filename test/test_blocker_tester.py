@@ -19,6 +19,7 @@ def reset_blocker_state(monkeypatch):
     # Reset refcount & lock-guarded entered state.
     # (_LOCK is a real RLock; we don't need to replace it, just zero the counter.)
     blocker._REFCOUNT = 0  # noqa: SLF001
+    blocker._ACTIVE_CONFIGS.clear()  # noqa: SLF001
 
     calls = {
         "install_all": [],
@@ -51,6 +52,7 @@ def reset_blocker_state(monkeypatch):
 
     # Safety: if someone forgot to exit a context, emulate a final uninstall and reset.
     blocker._REFCOUNT = 0  # noqa: SLF001
+    blocker._ACTIVE_CONFIGS.clear()  # noqa: SLF001
 
 
 # ---------- BlockConfig.from_kwargs mapping ----------
@@ -99,9 +101,9 @@ def test_hermetic_blocker_installs_with_expected_sections(reset_blocker_state):
     ):
         pass
 
-    # Exactly one install/uninstall pair
+    # Enter installs once, exit re-applies to empty by uninstalling once more.
     assert len(R.calls["install_all"]) == 1
-    assert len(R.calls["uninstall_all"]) == 1
+    assert len(R.calls["uninstall_all"]) == 2
 
     args = R.calls["install_all"][0]
     # When enabled => dict with expected keys; else => None
@@ -130,22 +132,34 @@ def test_hermetic_blocker_calls_install_even_if_all_sections_disabled(
     assert R.calls["install_all"][0] == dict(
         net=None, subproc=None, fs=None, imports=None
     )
-    assert len(R.calls["uninstall_all"]) == 1
+    assert len(R.calls["uninstall_all"]) == 2
 
 
 def test_nested_contexts_reference_counting_installs_once(reset_blocker_state):
     R = reset_blocker_state
-    # nest: install_all should run once on outermost enter; uninstall_all once on outermost exit
+    # nest: each policy change re-applies the merged guard set
     with hermetic_blocker(block_network=True):
         with hermetic_blocker(block_network=True, block_subprocess=True):
             with hermetic_blocker(fs_readonly=True):
-                # still inside; no extra installs expected
+                # still inside
                 pass
-        # inner exits shouldn't uninstall because outer still active
-        assert len(R.calls["uninstall_all"]) == 0
-    # after outer exit, exactly one uninstall
-    assert len(R.calls["install_all"]) == 1
-    assert len(R.calls["uninstall_all"]) == 1
+        assert len(R.calls["uninstall_all"]) == 5
+    assert len(R.calls["install_all"]) == 5
+    assert len(R.calls["uninstall_all"]) == 6
+    assert R.calls["install_all"][1]["subproc"]["trace"] is False
+    assert R.calls["install_all"][2]["fs"]["trace"] is False
+
+
+def test_nested_contexts_merge_policies(reset_blocker_state):
+    R = reset_blocker_state
+    with hermetic_blocker(block_network=True, allow_domains=["outer.example"]):
+        with hermetic_blocker(block_subprocess=True, allow_domains=["inner.example"]):
+            merged = R.calls["install_all"][-1]
+            assert merged["net"]["allow_domains"] == [
+                "outer.example",
+                "inner.example",
+            ]
+            assert merged["subproc"] == {"trace": False}
 
 
 def test_exception_not_suppressed_and_uninstalls(reset_blocker_state):
@@ -157,7 +171,7 @@ def test_exception_not_suppressed_and_uninstalls(reset_blocker_state):
         with hermetic_blocker(block_network=True):
             raise Boom("kaboom")
     # uninstall executed in finally
-    assert len(R.calls["uninstall_all"]) == 1
+    assert len(R.calls["uninstall_all"]) == 2
 
 
 # ---------- Decorator usage (ContextDecorator) ----------
@@ -172,7 +186,7 @@ def test_decorator_wraps_function_and_orders_install_uninstall(reset_blocker_sta
         timeline.append("func")
 
     target()
-    assert timeline == ["install", "func", "uninstall"]
+    assert timeline == ["uninstall", "install", "func", "uninstall"]
 
 
 def test_with_hermetic_alias_equivalent(reset_blocker_state):
@@ -184,7 +198,7 @@ def test_with_hermetic_alias_equivalent(reset_blocker_state):
         timeline.append("func")
 
     target()
-    assert timeline == ["install", "func", "uninstall"]
+    assert timeline == ["uninstall", "install", "func", "uninstall"]
     args = R.calls["install_all"][0]
     assert isinstance(args["subproc"], dict) and args["subproc"]["trace"] is True
 
@@ -198,10 +212,10 @@ async def test_async_with_context_manager(reset_blocker_state):
     async with hermetic_blocker(block_network=True, block_native=True):
         # inside: exactly one install
         assert len(R.calls["install_all"]) == 1
-        # still no uninstall yet
-        assert len(R.calls["uninstall_all"]) == 0
-    # after exit: one uninstall
-    assert len(R.calls["uninstall_all"]) == 1
+        # reapply starts with an uninstall
+        assert len(R.calls["uninstall_all"]) == 1
+    # after exit: a second uninstall clears the final policy
+    assert len(R.calls["uninstall_all"]) == 2
 
 
 # ---------- Parameter plumbing edge-cases ----------

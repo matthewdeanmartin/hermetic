@@ -11,7 +11,7 @@ __all__ = [
 ]
 
 __title__ = "hermetic-seal"
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __description__ = "User-space sandbox runner for Python console scripts"
 __credits__ = [{"name": "Matthew Dean Martin"}]
 __requires_python__ = ">=3.9"

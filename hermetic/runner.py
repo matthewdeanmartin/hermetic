@@ -79,7 +79,11 @@ def run(target: str, target_argv: List[str], cfg: GuardConfig) -> int:
             fs=(
                 dict(fs_root=cfg.fs_root, trace=cfg.trace) if cfg.fs_readonly else None
             ),
-            imports=(dict(trace=cfg.trace) if cfg.block_native else None),
+            imports=(
+            dict(trace=cfg.trace, block_subprocess_libs=cfg.no_subprocess)
+            if cfg.block_native
+            else None
+        ),
         )
         result = invoke_inprocess(spec)
         return int(result) if isinstance(result, int) else 0
@@ -87,4 +91,5 @@ def run(target: str, target_argv: List[str], cfg: GuardConfig) -> int:
         print(f"hermetic: blocked action: {e}", file=sys.stderr)
         return 2
     finally:
-        uninstall_all()
+        if not cfg.sealed:
+            uninstall_all()

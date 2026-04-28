@@ -20,8 +20,8 @@ def install(*, trace: bool = False) -> None:
         return
     _installed = True
 
-    targets = {
-        subprocess: ("Popen", "run", "call", "check_output"),
+    targets: dict[Any, tuple[str, ...]] = {
+        subprocess: ("Popen", "run", "call", "check_output", "check_call", "getoutput", "getstatusoutput"),
         os: (
             "system",
             "execv",
@@ -42,9 +42,38 @@ def install(*, trace: bool = False) -> None:
             "spawnve",
             "spawnvp",
             "spawnvpe",
+            "posix_spawn",
+            "posix_spawnp",
+            "startfile",
         ),
         asyncio: ("create_subprocess_exec", "create_subprocess_shell"),
     }
+
+    # Best-effort: also patch the C-level primitive on POSIX. Without this,
+    # any caller that re-implements Popen reaches fork_exec directly.
+    extra_modules: list[tuple[str, tuple[str, ...]]] = [
+        ("_posixsubprocess", ("fork_exec",)),
+        ("posix", ("fork", "forkpty", "system", "posix_spawn", "posix_spawnp")),
+        ("pty", ("fork", "spawn", "openpty")),
+    ]
+    for mod_name, fns in extra_modules:
+        mod = sys.modules.get(mod_name)
+        if mod is None:
+            try:
+                mod = __import__(mod_name)
+            except Exception:
+                mod = None
+        if mod is not None:
+            targets[mod] = fns
+
+    # Multiprocessing — block Process.start (the public entry point) so we
+    # don't have to enumerate every spawn/fork backend.
+    try:
+        import multiprocessing as _mp
+
+        _originals["multiprocessing.Process.start"] = _mp.Process.start
+    except Exception:
+        _mp = None  # type: ignore[assignment]
 
     for mod, funcs in targets.items():
         for name in funcs:
@@ -62,7 +91,17 @@ def install(*, trace: bool = False) -> None:
     for mod, funcs in targets.items():
         for name in funcs:
             if hasattr(mod, name):
-                setattr(mod, name, _raise)
+                try:
+                    setattr(mod, name, _raise)
+                except (AttributeError, TypeError):
+                    # Some C-level slots are read-only; skip.
+                    pass
+
+    if _mp is not None:
+        try:
+            _mp.Process.start = _raise  # type: ignore[assignment]
+        except (AttributeError, TypeError):
+            pass
 
 
 def uninstall() -> None:
@@ -70,9 +109,23 @@ def uninstall() -> None:
     if not _installed:
         return
     for key, original_func in _originals.items():
+        # Special-case nested attribute (e.g., multiprocessing.Process.start)
+        if key == "multiprocessing.Process.start":
+            mp = sys.modules.get("multiprocessing")
+            if mp is not None:
+                try:
+                    mp.Process.start = original_func  # type: ignore[assignment]
+                except (AttributeError, TypeError):
+                    pass
+            continue
         mod_name, func_name = key.split(".", 1)
-        mod = sys.modules[mod_name]
-        setattr(mod, func_name, original_func)
+        mod = sys.modules.get(mod_name)
+        if mod is None:
+            continue
+        try:
+            setattr(mod, func_name, original_func)
+        except (AttributeError, TypeError):
+            pass
     _installed = False
     _originals.clear()
 

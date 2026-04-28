@@ -15,6 +15,7 @@ class GuardConfig:
     allow_localhost: bool = False
     allow_domains: List[str] = field(default_factory=list)
     trace: bool = False
+    sealed: bool = False
 
 
 PROFILES: dict[str, GuardConfig] = {

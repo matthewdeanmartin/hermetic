@@ -64,6 +64,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--trace", action="store_true", help="Trace blocked actions to stderr."
     )
+    p.add_argument(
+        "--seal",
+        action="store_true",
+        help=(
+            "Once installed, refuse to uninstall guards for the rest of the "
+            "process. Raises the bar against one-line bypass via "
+            "uninstall_all() but is not bulletproof."
+        ),
+    )
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument(
         "--", dest="--", action="store_true", help=argparse.SUPPRESS
@@ -85,6 +94,7 @@ def parse_hermetic_args(argv: List[str]) -> GuardConfig:
         allow_localhost=bool(ns.allow_localhost),
         allow_domains=list(ns.allow_domain or []),
         trace=bool(ns.trace),
+        sealed=bool(getattr(ns, "seal", False)),
     )
     for prof in ns.profile or []:
         cfg = apply_profile(cfg, prof)
