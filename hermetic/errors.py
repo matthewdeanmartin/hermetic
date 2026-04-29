@@ -1,4 +1,6 @@
 # hermetic/errors.py
+"""Exception types raised by hermetic guard setup and enforcement."""
+
 from __future__ import annotations
 
 

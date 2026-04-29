@@ -1,3 +1,5 @@
+"""Guards that deny environment reads and mutations."""
+
 from __future__ import annotations
 
 import os
@@ -11,7 +13,7 @@ try:
 except ImportError:
     from typing_extensions import Never
 
-from ..errors import PolicyViolation
+from hermetic.errors import PolicyViolation
 
 _installed = False
 _originals: dict[str, Any] = {}
@@ -22,65 +24,86 @@ _VT = TypeVar("_VT")
 
 
 class _GuardedEnviron(MutableMapping[_KT, _VT]):
+    """Mapping wrapper that rejects all environment access."""
+
     def __init__(self, backing: MutableMapping[_KT, _VT], trace: bool = False) -> None:
+        """Wrap an existing environment mapping with denial behavior."""
         self._backing = backing
         self._trace_enabled = trace
 
     def _trace(self, msg: str) -> None:
+        """Emit a trace message when environment access is blocked."""
         if self._trace_enabled:
             print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
     def _deny_read(self) -> Never:
+        """Reject any attempt to inspect environment state."""
         self._trace("blocked environment read")
         raise PolicyViolation("environment disabled")
 
     def _deny_write(self) -> Never:
+        """Reject any attempt to mutate environment state."""
         self._trace("blocked environment mutation")
         raise PolicyViolation("environment mutation disabled")
 
     def __getitem__(self, key: _KT) -> _VT:
+        """Block environment key lookups."""
         return self._deny_read()
 
     def __setitem__(self, key: _KT, value: _VT) -> None:
+        """Block environment assignments."""
         self._deny_write()
 
     def __delitem__(self, key: _KT) -> None:
+        """Block environment deletions."""
         self._deny_write()
 
     def __iter__(self) -> Iterator[_KT]:  # pylint: disable=non-iterator-returned
+        """Block iteration over environment keys."""
         return self._deny_read()
 
     def __len__(self) -> int:  # pylint: disable=invalid-length-returned
+        """Block size checks against the environment."""
         return self._deny_read()
 
     def get(self, key: _KT, default: Any = None) -> Any:
+        """Block dictionary-style environment reads."""
         return self._deny_read()
 
     def copy(self) -> dict[_KT, _VT]:
+        """Block copying the environment mapping."""
         return self._deny_read()
 
     def items(self) -> Any:
+        """Block iteration over environment items."""
         return self._deny_read()
 
     def keys(self) -> Any:
+        """Block iteration over environment keys."""
         return self._deny_read()
 
     def values(self) -> Any:
+        """Block iteration over environment values."""
         return self._deny_read()
 
     def __contains__(self, key: object) -> bool:
+        """Block membership checks against environment keys."""
         return self._deny_read()
 
     def pop(self, key: _KT, default: Any = None) -> Any:
+        """Block removal of individual environment keys."""
         return self._deny_write()
 
     def popitem(self) -> tuple[_KT, _VT]:
+        """Block removal of arbitrary environment pairs."""
         return self._deny_write()
 
     def clear(self) -> None:
+        """Block clearing the environment mapping."""
         self._deny_write()
 
     def setdefault(self, key: _KT, default: Any = None) -> Any:
+        """Block setdefault calls on the environment mapping."""
         return self._deny_write()
 
     def update(  # pylint: disable=arguments-differ,unused-argument
@@ -88,13 +111,16 @@ class _GuardedEnviron(MutableMapping[_KT, _VT]):
         *args: Any,  # pylint: disable=arguments-differ,unused-argument
         **kwargs: Any,  # pylint: disable=arguments-differ,unused-argument
     ) -> None:
+        """Block bulk environment updates."""
         self._deny_write()
 
     def __repr__(self) -> str:  # pylint: disable=invalid-repr-returned
+        """Block stringifying the environment mapping."""
         return self._deny_read()
 
 
 def install(*, trace: bool = False) -> None:
+    """Patch environment APIs so reads and writes are denied."""
     global _installed
     if _installed:
         return
@@ -106,14 +132,17 @@ def install(*, trace: bool = False) -> None:
     _originals["os.unsetenv"] = os.unsetenv
 
     def _trace(msg: str) -> None:
+        """Emit a trace message when environment access is blocked."""
         if trace:
             print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
     def _deny_read(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
+        """Reject helper-based environment reads."""
         _trace("blocked environment read")
         raise PolicyViolation("environment disabled")
 
     def _deny_write(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
+        """Reject helper-based environment mutations."""
         _trace("blocked environment mutation")
         raise PolicyViolation("environment mutation disabled")
 
@@ -127,6 +156,7 @@ def install(*, trace: bool = False) -> None:
 
 
 def uninstall() -> None:
+    """Restore the original environment APIs."""
     global _installed
     if not _installed:
         return

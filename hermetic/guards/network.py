@@ -1,4 +1,6 @@
 # hermetic/guards/network.py
+"""Guards that block outbound networking and unsafe bind targets."""
+
 from __future__ import annotations
 
 import errno
@@ -8,7 +10,7 @@ import sys
 from textwrap import dedent
 from typing import Any, Iterable, Set
 
-from ..errors import PolicyViolation
+from hermetic.errors import PolicyViolation
 
 # State
 _originals: dict[str, Any] = {}
@@ -31,10 +33,12 @@ _LOCALHOST = {"127.0.0.1", "::1", "localhost", "0.0.0.0"}  # nosec
 
 
 def _normalize_host(host: str) -> str:
+    """Normalize a hostname for policy checks."""
     return (host or "").strip().lower().rstrip(".")
 
 
 def _domain_matches(host: str, domain: str) -> bool:
+    """Check whether a host is equal to or inside an allowed domain."""
     h = _normalize_host(host)
     d = _normalize_host(domain)
     return bool(d) and (h == d or h.endswith(f".{d}"))
@@ -43,9 +47,7 @@ def _domain_matches(host: str, domain: str) -> bool:
 def install(
     *, allow_localhost: bool, allow_domains: Iterable[str], trace: bool = False
 ) -> None:
-    """
-    Install a network guard that preserves socket.socket as a TYPE.
-    """
+    """Patch networking APIs while keeping `socket.socket` subclassable."""
     global _installed
     if _installed:
         return
@@ -69,10 +71,12 @@ def install(
         _originals["fromshare"] = socket.fromshare
 
     def _trace(msg: str) -> None:
+        """Emit a trace message when network access is blocked."""
         if trace:
             print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
     def _host_from(addr: Any) -> str:
+        """Extract the host component from a socket-style address."""
         try:
             if isinstance(addr, (tuple, list)) and len(addr) >= 1:
                 return str(addr[0])
@@ -81,6 +85,7 @@ def install(
             return ""
 
     def _is_allowed(host: str) -> bool:
+        """Check whether a host is permitted by the current network policy."""
         h = _normalize_host(host)
         if h in _METADATA_HOSTS:
             return False
@@ -89,6 +94,7 @@ def install(
         return any(_domain_matches(h, d) for d in allowed)
 
     def _bind_allowed(address: Any) -> bool:
+        """Allow only loopback-style bind targets."""
         # Permit binding only to the loopback interface (or wildcard, which
         # we treat as loopback when allow_localhost is set). Inbound listeners
         # on a real interface let an attacker exfiltrate by waiting for a
@@ -104,7 +110,10 @@ def install(
     _socket_base: Any = _originals["socket_cls"]
 
     class GuardedSocket(_socket_base):  # type: ignore[misc]
+        """Socket subclass that enforces the active network policy."""
+
         def connect(self, address: Any) -> Any:
+            """Permit allowed outbound connections and reject the rest."""
             host = _host_from(address)
             if _is_allowed(host):
                 return super().connect(address)
@@ -112,6 +121,7 @@ def install(
             raise PolicyViolation(f"network disabled: connect({host})")
 
         def connect_ex(self, address: Any) -> int:
+            """Mirror `connect_ex` while denying disallowed destinations."""
             host = _host_from(address)
             if _is_allowed(host):
                 return int(super().connect_ex(address))
@@ -119,6 +129,7 @@ def install(
             return errno.EACCES
 
         def sendto(self, data: Any, address: Any) -> Any:
+            """Permit datagram sends only to allowed destinations."""
             host = _host_from(address)
             if _is_allowed(host):
                 return super().sendto(data, address)
@@ -126,6 +137,7 @@ def install(
             raise PolicyViolation(f"network disabled: sendto({host})")
 
         def bind(self, address: Any) -> Any:
+            """Permit binds only on loopback-style interfaces."""
             if _bind_allowed(address):
                 return super().bind(address)
             host = _host_from(address)
@@ -141,6 +153,7 @@ def install(
                 flags: int = 0,
                 address: Any = None,
             ) -> Any:
+                """Permit `sendmsg` only for allowed destinations."""
                 host = _host_from(address)
                 if _is_allowed(host):
                     return super().sendmsg(buffers, ancdata, flags, address)
@@ -148,6 +161,7 @@ def install(
                 raise PolicyViolation(f"network disabled: sendmsg({host})")
 
     def create_connection_guard(address: Any, *a: Any, **k: Any) -> Any:
+        """Guard `socket.create_connection` with the active network policy."""
         host = _host_from(address)
         if _is_allowed(host):
             return _originals["create_connection"](address, *a, **k)
@@ -155,40 +169,47 @@ def install(
         raise PolicyViolation(f"network disabled: create_connection({host})")
 
     def getaddrinfo_guard(host: Any, *a: Any, **k: Any) -> Any:
+        """Guard DNS resolution through `socket.getaddrinfo`."""
         if _is_allowed(str(host)):
             return _originals["getaddrinfo"](host, *a, **k)
         _trace(f"blocked socket.getaddrinfo host={host} reason=no-network")
         raise PolicyViolation(f"network disabled: DNS({host})")
 
     def gethostbyname_guard(host: Any, *a: Any, **k: Any) -> Any:
+        """Guard `socket.gethostbyname` lookups."""
         if _is_allowed(str(host)):
             return _originals["gethostbyname"](host, *a, **k)
         _trace(f"blocked socket.gethostbyname host={host} reason=no-network")
         raise PolicyViolation(f"network disabled: DNS({host})")
 
     def gethostbyname_ex_guard(host: Any, *a: Any, **k: Any) -> Any:
+        """Guard `socket.gethostbyname_ex` lookups."""
         if _is_allowed(str(host)):
             return _originals["gethostbyname_ex"](host, *a, **k)
         _trace(f"blocked socket.gethostbyname_ex host={host} reason=no-network")
         raise PolicyViolation(f"network disabled: DNS({host})")
 
     def wrap_socket_guard(self: Any, sock: Any, *a: Any, **k: Any) -> Any:
+        """Reject TLS wrapping that could hide outbound socket use."""
         # pylint: disable=unused-argument
         _trace("blocked ssl.SSLContext.wrap_socket reason=no-network")
         raise PolicyViolation("network disabled: TLS")
 
     def socketpair_guard(*a: Any, **k: Any) -> Any:  # pylint: disable=unused-argument
+        """Reject creation of socketpair IPC channels."""
         # socketpair creates an in-process bidirectional channel. Block by
         # default — anything legitimately needing IPC can use a Pipe or Queue.
         _trace("blocked socket.socketpair reason=no-network")
         raise PolicyViolation("network disabled: socketpair")
 
     def fromfd_guard(*a: Any, **k: Any) -> Any:  # pylint: disable=unused-argument
+        """Reject reconstruction of sockets from file descriptors."""
         # Reconstructing a socket from a leaked fd bypasses our class. Block.
         _trace("blocked socket.fromfd reason=no-network")
         raise PolicyViolation("network disabled: fromfd")
 
     def fromshare_guard(*a: Any, **k: Any) -> Any:  # pylint: disable=unused-argument
+        """Reject reconstruction of sockets from shared state."""
         _trace("blocked socket.fromshare reason=no-network")
         raise PolicyViolation("network disabled: fromshare")
 
@@ -218,6 +239,7 @@ def install(
 
 
 def uninstall() -> None:
+    """Restore the original networking APIs."""
     global _installed
     if not _installed:
         return

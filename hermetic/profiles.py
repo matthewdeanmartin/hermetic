@@ -1,4 +1,5 @@
-# hermetic/profiles.py
+"""Named guard presets and helpers for combining them."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -7,6 +8,8 @@ from typing import List
 
 @dataclass
 class GuardConfig:
+    """Capture the guard settings used to run a target."""
+
     no_network: bool = False
     no_subprocess: bool = False
     fs_readonly: bool = False
@@ -40,6 +43,7 @@ PROFILES: dict[str, GuardConfig] = {
 
 
 def apply_profile(base: GuardConfig, name: str) -> GuardConfig:
+    """Overlay a named profile onto an existing guard config."""
     prof = PROFILES.get(name)
     if not prof:
         raise SystemExit(f"unknown profile: {name}")

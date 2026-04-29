@@ -1,3 +1,5 @@
+"""Guards that block runtime code compilation and execution helpers."""
+
 from __future__ import annotations
 
 import ast
@@ -7,13 +9,14 @@ import sys
 from textwrap import dedent
 from typing import Any
 
-from ..errors import PolicyViolation
+from hermetic.errors import PolicyViolation
 
 _installed = False
 _originals: dict[str, Any] = {}
 
 
 def _caller_name(depth: int = 1) -> str:
+    """Return the module name for a caller further up the stack."""
     try:
         frame = sys._getframe(depth + 1)  # pylint: disable=protected-access
     except ValueError:
@@ -22,6 +25,7 @@ def _caller_name(depth: int = 1) -> str:
 
 
 def _compile_is_internal(flags: int) -> bool:
+    """Allow compile calls that come from import machinery internals."""
     if flags & getattr(ast, "PyCF_ONLY_AST", 0):
         return True
     caller = _caller_name(2)
@@ -29,10 +33,12 @@ def _compile_is_internal(flags: int) -> bool:
 
 
 def _runtime_exec_is_internal() -> bool:
+    """Detect exec usage triggered by importlib internals."""
     return _caller_name(2).startswith("importlib.")
 
 
 def install(*, trace: bool = False) -> None:
+    """Patch code execution entry points to raise policy violations."""
     global _installed
     if _installed:
         return
@@ -45,14 +51,17 @@ def install(*, trace: bool = False) -> None:
     _originals["runpy.run_path"] = runpy.run_path
 
     def _trace(msg: str) -> None:
+        """Emit a trace message when code execution is blocked."""
         if trace:
             print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
     def _deny_eval(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
+        """Reject direct calls to `eval`."""
         _trace("blocked eval")
         raise PolicyViolation("dynamic code execution disabled: eval")
 
     def _guard_exec(*a: Any, **k: Any) -> Any:
+        """Allow importlib exec calls and reject other runtime exec usage."""
         if _runtime_exec_is_internal():
             return _originals["exec"](*a, **k)
         _trace("blocked exec")
@@ -67,6 +76,7 @@ def install(*, trace: bool = False) -> None:
         optimize: int = -1,
         **kwargs: Any,
     ) -> Any:
+        """Allow importlib compilation paths and reject other compile calls."""
         if _compile_is_internal(flags):
             return _originals["compile"](
                 source,
@@ -81,6 +91,7 @@ def install(*, trace: bool = False) -> None:
         raise PolicyViolation("dynamic code execution disabled: compile")
 
     def _guard_run_module(*a: Any, **k: Any) -> Any:
+        """Allow hermetic's own module execution helper and block others."""
         caller = _caller_name()
         if caller.startswith("hermetic."):
             return _originals["runpy.run_module"](*a, **k)
@@ -88,6 +99,7 @@ def install(*, trace: bool = False) -> None:
         raise PolicyViolation("dynamic code execution disabled: run_module")
 
     def _guard_run_path(*a: Any, **k: Any) -> Any:
+        """Allow hermetic's own path execution helper and block others."""
         caller = _caller_name()
         if caller.startswith("hermetic."):
             return _originals["runpy.run_path"](*a, **k)
@@ -102,6 +114,7 @@ def install(*, trace: bool = False) -> None:
 
 
 def uninstall() -> None:
+    """Restore the original code execution entry points."""
     global _installed
     if not _installed:
         return

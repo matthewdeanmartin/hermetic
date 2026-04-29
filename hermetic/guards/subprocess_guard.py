@@ -1,4 +1,6 @@
 # hermetic/guards/subprocess_guard.py
+"""Guards that block subprocess creation and process-spawning helpers."""
+
 from __future__ import annotations
 
 import asyncio
@@ -13,13 +15,14 @@ try:
 except ImportError:
     from typing_extensions import Never  # Python 3.9/3.10
 
-from ..errors import PolicyViolation
+from hermetic.errors import PolicyViolation
 
 _originals: dict[str, object] = {}
 _installed = False
 
 
 def install(*, trace: bool = False) -> None:
+    """Patch subprocess entry points so process creation is denied."""
     global _installed
     if _installed:
         return
@@ -97,10 +100,12 @@ def install(*, trace: bool = False) -> None:
                 _originals[f"{mod.__name__}.{name}"] = getattr(mod, name)
 
     def _trace(msg: str) -> None:
+        """Emit a trace message when subprocess creation is blocked."""
         if trace:
             print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
     def _raise(*a: Any, **k: Any) -> Never:  # pylint: disable=unused-argument
+        """Reject process creation through any patched entry point."""
         _trace("blocked subprocess reason=no-subprocess")
         raise PolicyViolation("subprocess disabled")
 
@@ -121,6 +126,7 @@ def install(*, trace: bool = False) -> None:
 
 
 def uninstall() -> None:
+    """Restore the original subprocess and spawn entry points."""
     global _installed
     if not _installed:
         return

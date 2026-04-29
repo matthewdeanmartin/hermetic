@@ -1,18 +1,20 @@
-# hermetic/runner.py
+"""Target execution helpers for in-process and bootstrap modes."""
+
 from __future__ import annotations
 
 import os
 import sys
 from typing import Any, Dict, List
 
-from .bootstrap import write_sitecustomize
-from .errors import PolicyViolation
-from .guards import install_all, uninstall_all
-from .profiles import GuardConfig
-from .resolver import TargetSpec, invoke_inprocess, resolve
+from hermetic.bootstrap import write_sitecustomize
+from hermetic.errors import PolicyViolation
+from hermetic.guards import install_all, uninstall_all
+from hermetic.profiles import GuardConfig
+from hermetic.resolver import TargetSpec, invoke_inprocess, resolve
 
 
 def config_to_flags(cfg: GuardConfig) -> Dict[str, Any]:
+    """Convert a guard config into bootstrap-compatible flag data."""
     return {
         "no_network": cfg.no_network,
         "no_subprocess": cfg.no_subprocess,
@@ -31,6 +33,7 @@ def config_to_flags(cfg: GuardConfig) -> Dict[str, Any]:
 
 
 def run(target: str, target_argv: List[str], cfg: GuardConfig) -> int:
+    """Run a target under the requested guard configuration."""
     spec: TargetSpec = resolve(target)
 
     if spec.mode == "bootstrap" and spec.exe_path and spec.interp_path:

@@ -1,5 +1,5 @@
-# hermetic/guards/__init__.py
-# This file makes the 'guards' directory a package.
+"""Guard module orchestration for bulk install and uninstall operations."""
+
 from typing import Any
 
 from . import imports_guard  # nosec
@@ -19,6 +19,7 @@ _all_guards = (
 
 
 def install_all(**kwargs: Any) -> None:
+    """Install every requested guard using grouped keyword options."""
     if kwargs.get("net"):
         network.install(**kwargs["net"])
     if kwargs.get("subproc"):
@@ -36,5 +37,6 @@ def install_all(**kwargs: Any) -> None:
 
 
 def uninstall_all() -> None:
+    """Remove installed guards in reverse dependency order."""
     for guard in reversed(_all_guards):
         guard.uninstall()

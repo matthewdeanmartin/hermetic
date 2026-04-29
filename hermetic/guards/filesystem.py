@@ -1,4 +1,6 @@
 # hermetic/guards/filesystem.py
+"""Guards that make filesystem access readonly and optionally rooted."""
+
 from __future__ import annotations
 
 import builtins
@@ -9,7 +11,7 @@ import sys
 from textwrap import dedent
 from typing import Any
 
-from ..errors import PolicyViolation
+from hermetic.errors import PolicyViolation
 
 _installed = False
 _originals: dict[str, Any] = {}
@@ -29,17 +31,19 @@ _PATH_WRITE_METHODS = (
 
 
 def _norm(path: str) -> str:
+    """Resolve a path to its normalized real location."""
     return os.path.realpath(path)
 
 
 def _is_within(path: str, root: str) -> bool:
+    """Check whether a path resolves inside the allowed root."""
     p = _norm(path)
     r = _norm(root)
     return p == r or p.startswith(r + os.sep)
 
 
 def install(*, fs_root: str | None = None, trace: bool = False) -> None:
-    """Readonly FS. Deny writes everywhere. Optionally require reads under fs_root."""
+    """Patch filesystem APIs to deny writes and optional out-of-root reads."""
     global _installed, _root
     if _installed:
         return
@@ -79,10 +83,12 @@ def install(*, fs_root: str | None = None, trace: bool = False) -> None:
             _originals[f"os.{name}"] = getattr(os, name)
 
     def _trace(msg: str) -> None:
+        """Emit a trace message when filesystem access is blocked."""
         if trace:
             print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
     def _coerce_path(p: Any) -> str:
+        """Convert a path-like input into a printable filesystem path."""
         try:
             return str(os.fspath(p))
         except TypeError:
@@ -91,6 +97,7 @@ def install(*, fs_root: str | None = None, trace: bool = False) -> None:
     def open_guard(  # pylint: disable=keyword-arg-before-vararg
         file: Any, mode: str = "r", *a: Any, **k: Any
     ) -> Any:
+        """Allow readonly opens and reject writes or out-of-root reads."""
         path = _coerce_path(file)
         # mode may be int (numeric flags) when open_guard is reached via
         # os.open; the os_open_guard already translated to a string in that
@@ -109,6 +116,7 @@ def install(*, fs_root: str | None = None, trace: bool = False) -> None:
     )
 
     def os_open_guard(path: Any, flags: int, *a: Any, **k: Any) -> Any:
+        """Translate `os.open` flags into the guarded open policy."""
         mode = "r" if not (flags & WRITE_FLAGS) else "w"
         return open_guard(path, mode, *a, **k)
 
@@ -130,6 +138,7 @@ def install(*, fs_root: str | None = None, trace: bool = False) -> None:
                 pass
 
     def _deny(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
+        """Reject filesystem mutation helpers."""
         _trace("blocked fs mutation")
         raise PolicyViolation("filesystem mutation disabled")
 
@@ -170,6 +179,7 @@ def install(*, fs_root: str | None = None, trace: bool = False) -> None:
 
 
 def uninstall() -> None:
+    """Restore the original filesystem APIs."""
     global _originals
     global _installed, _root
     if not _installed:

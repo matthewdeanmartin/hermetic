@@ -1,5 +1,5 @@
-# hermetic/utilmake_prompt.sh
-# make_source.sh.py
+"""Small helpers shared by hermetic CLI and runner code."""
+
 from __future__ import annotations
 
 import os
@@ -11,6 +11,8 @@ from typing import List
 
 @dataclass(frozen=True)
 class SplitArgs:
+    """Hold the separated hermetic and target argument vectors."""
+
     hermetic_argv: List[str]
     target_argv: List[str]
 
@@ -19,14 +21,7 @@ _HELP_TOKENS = {"-h", "--help", "--version"}
 
 
 def split_argv(argv: list[str]) -> SplitArgs:
-    """
-    Split command line into hermetic vs target segments.
-
-    Rules:
-      - If '--' present, split there.
-      - If no '--' and any of {-h, --help, --version} present, treat as hermetic-only.
-      - Otherwise, require '--' to avoid flag collisions.
-    """
+    """Split CLI arguments into hermetic flags and target arguments."""
     if "--" in argv:
         idx = argv.index("--")
         return SplitArgs(argv[:idx], argv[idx + 1 :])
@@ -38,6 +33,7 @@ def split_argv(argv: list[str]) -> SplitArgs:
 
 
 def is_same_interpreter(exe_path: str) -> bool:
+    """Check whether a resolved executable is the current interpreter."""
     # Compare normalized sys.executable with resolved shebang interpreter path.
     try:
         here = os.path.realpath(sys.executable)
@@ -48,4 +44,5 @@ def is_same_interpreter(exe_path: str) -> bool:
 
 
 def which(exe_name: str) -> str | None:
+    """Locate an executable on PATH."""
     return shutil.which(exe_name)

@@ -1,4 +1,6 @@
 # hermetic/guards/imports_guard.py
+"""Guards that block native extensions and denied imports."""
+
 from __future__ import annotations
 
 import builtins
@@ -8,7 +10,7 @@ import sys
 from textwrap import dedent
 from typing import Any, Iterable
 
-from ..errors import PolicyViolation
+from hermetic.errors import PolicyViolation
 
 _installed = False
 _originals: dict[str, Any] = {}
@@ -42,15 +44,20 @@ _CFFI_ATTRS = ("FFI", "dlopen", "verify")
 
 
 def _deny_use(name: str) -> Any:
+    """Raise a policy violation for direct native interface use."""
     raise PolicyViolation(f"native interface blocked: {name}")
 
 
 class _NativeExtensionFinder:
+    """Meta path finder that rejects native extension specs."""
+
     def __init__(self, *, ext_loader_type: type[Any], trace_func: Any) -> None:
+        """Remember the loader type that identifies native extensions."""
         self._ext_loader_type = ext_loader_type
         self._trace = trace_func
 
     def find_spec(self, fullname: str, path: Any = None, target: Any = None) -> Any:
+        """Reject import specs that resolve to native extension loaders."""
         spec = mach.PathFinder.find_spec(fullname, path, target)
         if spec and isinstance(spec.loader, self._ext_loader_type):
             self._trace(f"blocked native import spec={fullname}")
@@ -59,7 +66,7 @@ class _NativeExtensionFinder:
 
 
 def _patch_module_attrs(mod_name: str, attrs: tuple[str, ...]) -> None:
-    """Best-effort: replace `mod.<attr>` with a denier on each named attribute."""
+    """Replace selected module attributes with policy-raising stand-ins."""
     mod = sys.modules.get(mod_name)
     if mod is None:
         return
@@ -80,14 +87,14 @@ def _patch_module_attrs(mod_name: str, attrs: tuple[str, ...]) -> None:
 
 
 def _patch_loaded_native_modules() -> None:
+    """Patch already-imported native helper modules in place."""
     _patch_module_attrs("ctypes", _CTYPES_ATTRS + _CTYPES_LOADER_ATTRS)
     _patch_module_attrs("ctypes.util", _CTYPES_UTIL_ATTRS)
     _patch_module_attrs("cffi", _CFFI_ATTRS)
 
 
 def _invalidate_finder_caches() -> None:
-    """Force importlib to re-walk path hooks so our subclassed loader
-    is used for any subsequent native-extension import."""
+    """Refresh importlib caches after changing import guard state."""
     try:
         importlib.invalidate_caches()
     except Exception:  # nosec: B110:try_except_pass
@@ -95,10 +102,12 @@ def _invalidate_finder_caches() -> None:
 
 
 def _normalize_deny_names(names: Iterable[str]) -> set[str]:
+    """Trim and filter the configured denied import names."""
     return {name.strip() for name in names if name and name.strip()}
 
 
 def _matches_denied_import(name: str, denied_name: str) -> bool:
+    """Check whether an import matches a denied module prefix."""
     root = name.split(".", 1)[0]
     return (
         name == denied_name or name.startswith(f"{denied_name}.") or root == denied_name
@@ -112,13 +121,7 @@ def install(
     block_subprocess_libs: bool = False,
     deny_imports: Iterable[str] = (),
 ) -> None:
-    """Deny native extension imports and FFI modules.
-
-    Set `block_subprocess_libs=True` to additionally deny imports of
-    common subprocess-replacement libraries (sh, pexpect, plumbum,
-    sarge, delegator). Off by default so that block_native alone
-    doesn't punish unit-test users.
-    """
+    """Patch import machinery to reject configured modules and FFI surfaces."""
     global _installed
     if _installed:
         return
@@ -135,6 +138,7 @@ def install(
         deny_names |= _SUBPROC_REPLACEMENT_NAMES
 
     def _trace(msg: str) -> None:
+        """Emit a trace message when an import is blocked."""
         if trace:
             print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
@@ -146,7 +150,10 @@ def install(
         sys.meta_path = [native_finder, *list(sys.meta_path)]
 
         class GuardedExtLoader(mach.ExtensionFileLoader):
+            """Loader stub that refuses to create native extension modules."""
+
             def create_module(self, spec: Any) -> Any:
+                """Reject native module creation during import loading."""
                 _trace(f"blocked native import spec={spec.name}")
                 raise PolicyViolation(f"native import blocked: {spec.name}")
 
@@ -157,6 +164,7 @@ def install(
         fromlist: Any = (),
         level: int = 0,
     ) -> Any:
+        """Reject denied imports before delegating to Python's importer."""
         if any(_matches_denied_import(name, denied_name) for denied_name in deny_names):
             _trace(f"blocked import name={name}")
             raise PolicyViolation(f"import blocked: {name}")
@@ -171,6 +179,7 @@ def install(
 
 
 def uninstall() -> None:
+    """Restore the original import machinery and patched attributes."""
     global _installed
     if not _installed:
         return

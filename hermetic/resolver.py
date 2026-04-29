@@ -1,4 +1,5 @@
-# hermetic/resolver.py
+"""Resolve targets into importable or bootstrapable execution specs."""
+
 from __future__ import annotations
 
 import importlib
@@ -10,13 +11,15 @@ import sys
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Tuple
 
-from .util import which
+from hermetic.util import which
 
 SHEBANG_RE = re.compile(r"^#!\s*(\S+)(?:\s+.*)?$")
 
 
 @dataclass
 class TargetSpec:
+    """Describe how hermetic should launch a requested target."""
+
     module: str
     attr: str  # "__main__" to run as script
     mode: str  # "inprocess" or "bootstrap"
@@ -25,6 +28,7 @@ class TargetSpec:
 
 
 def _console_entry(name: str) -> Optional[Tuple[str, str]]:
+    """Resolve a console script name to its module and attribute."""
     eps = importlib.metadata.entry_points()
     group: Iterable[importlib.metadata.EntryPoint]
     try:
@@ -42,6 +46,7 @@ def _console_entry(name: str) -> Optional[Tuple[str, str]]:
 
 
 def _script_shebang(exe: str) -> Optional[str]:
+    """Read the interpreter path declared in a script shebang."""
     try:
         with open(exe, "rb") as f:
             first = f.readline().decode(errors="ignore")
@@ -52,6 +57,7 @@ def _script_shebang(exe: str) -> Optional[str]:
 
 
 def resolve(target: str) -> TargetSpec:
+    """Choose the execution strategy for a target string."""
     # module:attr shortcut
     if ":" in target:
         m, a = target.split(":", 1)
@@ -103,6 +109,7 @@ def resolve(target: str) -> TargetSpec:
 
 
 def invoke_inprocess(spec: TargetSpec) -> Any:
+    """Import or run a target directly inside the current interpreter."""
     sys.modules.pop(spec.module, None)  # ensure fresh import after guards
     if spec.attr == "__main__":
         return runpy.run_module(spec.module, run_name="__main__")

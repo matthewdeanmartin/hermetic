@@ -1,14 +1,15 @@
-# hermetic/cli.py
+"""Command-line parsing and entry points for hermetic."""
+
 from __future__ import annotations
 
 import argparse
 import sys
 from typing import List
 
-from . import __version__
-from .profiles import GuardConfig, apply_profile
-from .runner import run
-from .util import split_argv
+from hermetic.__about__ import __version__
+from hermetic.profiles import GuardConfig, apply_profile
+from hermetic.runner import run
+from hermetic.util import split_argv
 
 EXAMPLES = """\
 examples:
@@ -21,6 +22,7 @@ notes:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Create the CLI parser for hermetic's own flags."""
     p = argparse.ArgumentParser(
         prog="hermetic",
         description="Run a Python console script with user-space sandbox guards.",
@@ -104,6 +106,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def parse_hermetic_args(argv: List[str]) -> GuardConfig:
+    """Translate CLI flags into a guard configuration."""
     parser = build_parser()
     ns = parser.parse_args(argv)
     cfg = GuardConfig(
@@ -129,6 +132,7 @@ def parse_hermetic_args(argv: List[str]) -> GuardConfig:
 
 
 def main(argv: List[str] | None = None) -> int:
+    """Run the CLI and dispatch to the requested target."""
     argv = list(sys.argv[1:] if argv is None else argv)
     split = split_argv(argv)
 
