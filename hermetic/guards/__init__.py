@@ -3,14 +3,8 @@
 from typing import Any
 
 from . import imports_guard  # nosec
-from . import (
-    code_exec,
-    environment,
-    filesystem,
-    interpreter,  # nosec
-    network,
-    subprocess_guard,
-)
+from . import interpreter  # nosec
+from . import code_exec, environment, filesystem, network, subprocess_guard
 
 # This makes install_all and uninstall_all easily accessible.
 _all_guards = (
@@ -35,10 +29,10 @@ def install_all(**kwargs: Any) -> None:
         environment.install(**kwargs["env"])
     if kwargs.get("code"):
         code_exec.install(**kwargs["code"])
-    if kwargs.get("interp"):
-        interpreter.install(**kwargs["interp"])
     if kwargs.get("imports"):
         imports_guard.install(**kwargs["imports"])
+    if kwargs.get("interp"):
+        interpreter.install(**kwargs["interp"])
 
 
 def uninstall_all() -> None:

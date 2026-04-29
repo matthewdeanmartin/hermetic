@@ -45,6 +45,19 @@ def _deny_use(name: str) -> Any:
     raise PolicyViolation(f"native interface blocked: {name}")
 
 
+class _NativeExtensionFinder:
+    def __init__(self, *, ext_loader_type: type[Any], trace_func: Any) -> None:
+        self._ext_loader_type = ext_loader_type
+        self._trace = trace_func
+
+    def find_spec(self, fullname: str, path: Any = None, target: Any = None) -> Any:
+        spec = mach.PathFinder.find_spec(fullname, path, target)
+        if spec and isinstance(spec.loader, self._ext_loader_type):
+            self._trace(f"blocked native import spec={fullname}")
+            raise PolicyViolation(f"native import blocked: {fullname}")
+        return spec
+
+
 def _patch_module_attrs(mod_name: str, attrs: tuple[str, ...]) -> None:
     """Best-effort: replace `mod.<attr>` with a denier on each named attribute."""
     mod = sys.modules.get(mod_name)
@@ -113,6 +126,7 @@ def install(
     _originals["__import__"] = builtins.__import__
     if block_native:
         _originals["ExtLoader"] = mach.ExtensionFileLoader
+        _originals["sys.meta_path"] = sys.meta_path
 
     deny_names = _normalize_deny_names(deny_imports)
     if block_native:
@@ -125,6 +139,11 @@ def install(
             print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
     if block_native:
+        native_finder = _NativeExtensionFinder(
+            ext_loader_type=_originals["ExtLoader"],
+            trace_func=_trace,
+        )
+        sys.meta_path = [native_finder, *list(sys.meta_path)]
 
         class GuardedExtLoader(mach.ExtensionFileLoader):
             def create_module(self, spec: Any) -> Any:
@@ -158,6 +177,8 @@ def uninstall() -> None:
     if "ExtLoader" in _originals:
         mach.ExtensionFileLoader = _originals.pop("ExtLoader")  # type: ignore[misc]
     builtins.__import__ = _originals.pop("__import__")
+    if "sys.meta_path" in _originals:
+        sys.meta_path = _originals.pop("sys.meta_path")
     for key in list(_originals):
         mod_name, attr = key.split(".", 1)
         mod = sys.modules.get(mod_name)
@@ -179,6 +200,7 @@ BOOTSTRAP_CODE = dedent(
 if cfg.get("block_native") or cfg.get("deny_imports"):
     _origExt = mach.ExtensionFileLoader
     _origImp = builtins.__import__
+    _origMetaPath = sys.meta_path
     _BLOCK_NATIVE = bool(cfg.get("block_native"))
     _BLOCK_SUBPROC_LIBS = bool(cfg.get("no_subprocess"))
     _DENY = set([n for n in cfg.get("deny_imports", []) if n])
@@ -202,12 +224,22 @@ if cfg.get("block_native") or cfg.get("deny_imports"):
         _patch_attrs("ctypes", ("CDLL","PyDLL","WinDLL","OleDLL","LibraryLoader","cdll","pydll","windll","oledll"))
         _patch_attrs("ctypes.util", ("find_library","find_msvcrt"))
         _patch_attrs("cffi", ("FFI","dlopen","verify"))
+    class _NativeExtensionFinder:
+        def __init__(self, ext_loader_type):
+            self._ext_loader_type = ext_loader_type
+        def find_spec(self, fullname, path=None, target=None):
+            spec = mach.PathFinder.find_spec(fullname, path, target)
+            if spec and isinstance(spec.loader, self._ext_loader_type):
+                _tr(f"blocked native import spec={fullname}")
+                raise _HPolicy(f"native import blocked: {fullname}")
+            return spec
     class GuardedExtLoader(_origExt):
         def create_module(self, spec): _tr(f"blocked native import spec={spec.name}"); raise _HPolicy("native import blocked")
     def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
         if any(_match_import(name, denied) for denied in _DENY): _trimp(name); raise _HPolicy("import blocked")
         return _origImp(name, globals, locals, fromlist, level)
     if _BLOCK_NATIVE:
+        sys.meta_path = [_NativeExtensionFinder(_origExt)] + list(_origMetaPath)
         mach.ExtensionFileLoader = GuardedExtLoader
     builtins.__import__ = guarded_import
     if _BLOCK_NATIVE:

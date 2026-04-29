@@ -50,7 +50,7 @@ _SITE_CUSTOMIZE = dedent(
             print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
     # --- GUARDS START ---
-# --- environment ---
+    # --- environment ---
     if cfg.get("no_environment"):
         class _GuardedEnviron:
             def __init__(self, trace_enabled=False):
@@ -372,6 +372,59 @@ _SITE_CUSTOMIZE = dedent(
                     except (AttributeError, TypeError): pass
     
     
+    # --- strict imports ---
+    if cfg.get("block_native") or cfg.get("deny_imports"):
+        _origExt = mach.ExtensionFileLoader
+        _origImp = builtins.__import__
+        _origMetaPath = sys.meta_path
+        _BLOCK_NATIVE = bool(cfg.get("block_native"))
+        _BLOCK_SUBPROC_LIBS = bool(cfg.get("no_subprocess"))
+        _DENY = set([n for n in cfg.get("deny_imports", []) if n])
+        if _BLOCK_NATIVE:
+            _DENY |= {"ctypes","_ctypes","cffi","_cffi_backend"}
+        if _BLOCK_NATIVE and _BLOCK_SUBPROC_LIBS:
+            _DENY |= {"sh","pexpect","plumbum","sarge","delegator"}
+        def _trimp(n): _tr(f"blocked import name={n}")
+        def _deny_native_use(name): raise _HPolicy(f"native interface blocked: {name}")
+        def _match_import(name, denied):
+            root = name.split(".", 1)[0]
+            return name == denied or name.startswith(denied + ".") or root == denied
+        def _patch_attrs(mod_name, attrs):
+            m = sys.modules.get(mod_name)
+            if m is None: return
+            for a in attrs:
+                if hasattr(m, a):
+                    try: setattr(m, a, lambda *_a, _n=f"{mod_name}.{a}", **_k: _deny_native_use(_n))
+                    except (AttributeError, TypeError): pass
+        def _patch_loaded_native_modules():
+            _patch_attrs("ctypes", ("CDLL","PyDLL","WinDLL","OleDLL","LibraryLoader","cdll","pydll","windll","oledll"))
+            _patch_attrs("ctypes.util", ("find_library","find_msvcrt"))
+            _patch_attrs("cffi", ("FFI","dlopen","verify"))
+        class _NativeExtensionFinder:
+            def __init__(self, ext_loader_type):
+                self._ext_loader_type = ext_loader_type
+            def find_spec(self, fullname, path=None, target=None):
+                spec = mach.PathFinder.find_spec(fullname, path, target)
+                if spec and isinstance(spec.loader, self._ext_loader_type):
+                    _tr(f"blocked native import spec={fullname}")
+                    raise _HPolicy(f"native import blocked: {fullname}")
+                return spec
+        class GuardedExtLoader(_origExt):
+            def create_module(self, spec): _tr(f"blocked native import spec={spec.name}"); raise _HPolicy("native import blocked")
+        def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if any(_match_import(name, denied) for denied in _DENY): _trimp(name); raise _HPolicy("import blocked")
+            return _origImp(name, globals, locals, fromlist, level)
+        if _BLOCK_NATIVE:
+            sys.meta_path = [_NativeExtensionFinder(_origExt)] + list(_origMetaPath)
+            mach.ExtensionFileLoader = GuardedExtLoader
+        builtins.__import__ = guarded_import
+        if _BLOCK_NATIVE:
+            _patch_loaded_native_modules()
+            try:
+                import importlib as _il; _il.invalidate_caches()
+            except Exception: pass
+    
+    
     # --- interpreter mutation ---
     if cfg.get("no_interpreter_mutation"):
         import site as _site
@@ -431,48 +484,6 @@ _SITE_CUSTOMIZE = dedent(
         if hasattr(os, "fchdir"):
             os.fchdir = _deny_fchdir
         _site.addsitedir = _deny_addsitedir
-    
-    
-    # --- strict imports ---
-    if cfg.get("block_native") or cfg.get("deny_imports"):
-        _origExt = mach.ExtensionFileLoader
-        _origImp = builtins.__import__
-        _BLOCK_NATIVE = bool(cfg.get("block_native"))
-        _BLOCK_SUBPROC_LIBS = bool(cfg.get("no_subprocess"))
-        _DENY = set([n for n in cfg.get("deny_imports", []) if n])
-        if _BLOCK_NATIVE:
-            _DENY |= {"ctypes","_ctypes","cffi","_cffi_backend"}
-        if _BLOCK_NATIVE and _BLOCK_SUBPROC_LIBS:
-            _DENY |= {"sh","pexpect","plumbum","sarge","delegator"}
-        def _trimp(n): _tr(f"blocked import name={n}")
-        def _deny_native_use(name): raise _HPolicy(f"native interface blocked: {name}")
-        def _match_import(name, denied):
-            root = name.split(".", 1)[0]
-            return name == denied or name.startswith(denied + ".") or root == denied
-        def _patch_attrs(mod_name, attrs):
-            m = sys.modules.get(mod_name)
-            if m is None: return
-            for a in attrs:
-                if hasattr(m, a):
-                    try: setattr(m, a, lambda *_a, _n=f"{mod_name}.{a}", **_k: _deny_native_use(_n))
-                    except (AttributeError, TypeError): pass
-        def _patch_loaded_native_modules():
-            _patch_attrs("ctypes", ("CDLL","PyDLL","WinDLL","OleDLL","LibraryLoader","cdll","pydll","windll","oledll"))
-            _patch_attrs("ctypes.util", ("find_library","find_msvcrt"))
-            _patch_attrs("cffi", ("FFI","dlopen","verify"))
-        class GuardedExtLoader(_origExt):
-            def create_module(self, spec): _tr(f"blocked native import spec={spec.name}"); raise _HPolicy("native import blocked")
-        def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
-            if any(_match_import(name, denied) for denied in _DENY): _trimp(name); raise _HPolicy("import blocked")
-            return _origImp(name, globals, locals, fromlist, level)
-        if _BLOCK_NATIVE:
-            mach.ExtensionFileLoader = GuardedExtLoader
-        builtins.__import__ = guarded_import
-        if _BLOCK_NATIVE:
-            _patch_loaded_native_modules()
-            try:
-                import importlib as _il; _il.invalidate_caches()
-            except Exception: pass
     # --- GUARDS END ---
     # --- BOOTSTRAP END ---
     '''

@@ -79,8 +79,8 @@ class _GuardedEnviron(MutableMapping[str, str]):
     def setdefault(self, key: str, default: Any = None) -> Any:
         self._deny_write()
 
-    def update( # pylint: disable=arguments-differ,unused-argument
-        self, # pylint: disable=arguments-differ,unused-argument
+    def update(  # pylint: disable=arguments-differ,unused-argument
+        self,  # pylint: disable=arguments-differ,unused-argument
         *args: Any,  # pylint: disable=arguments-differ,unused-argument
         **kwargs: Any,  # pylint: disable=arguments-differ,unused-argument
     ) -> None:

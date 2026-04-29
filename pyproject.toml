@@ -126,4 +126,9 @@ include = [
 ]
 
 [tool.troml-dev-status]
-mode = "application"  # or "library"
+mode = "library"  # or "application"
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+tests = []
+skips = ["B404"]

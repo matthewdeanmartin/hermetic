@@ -107,8 +107,8 @@ def main():
         network,
         subprocess_guard,
         filesystem,
-        interpreter,
         imports_guard,
+        interpreter,
     ]
 
     # Concatenate the bootstrap code from all guard modules
@@ -117,9 +117,10 @@ def main():
     )
 
     # Indent the guard code to fit into the sitecustomize template
+    # Strip first to avoid leading/trailing empty lines causing indentation issues
     indented_guards_code = "\n".join(
-        f"    {line}" for line in all_guards_code.splitlines()
-    ).strip()
+        f"    {line}" for line in all_guards_code.strip().splitlines()
+    )
 
     print("Generating hermetic/bootstrap.py...")
     final_content = BOOTSTRAP_PY_TEMPLATE.format(

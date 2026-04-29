@@ -192,6 +192,8 @@ pytest: clean uv-lock install-plugins pytest-only
 smoke-only:
 	@echo "Running CLI smoke checks"
 	$(VENV) bash ./scripts/basic_checks.sh
+	@echo "Running programmatic API integration checks"
+	$(VENV) bash ./scripts/integration_tests.sh
 
 .PHONY: smoke
 smoke: uv-lock install-plugins smoke-only
@@ -208,6 +210,7 @@ repro: clean uv-lock install-plugins
 	@echo "Running serial reproduction-friendly verification"
 	$(VENV) pytest test -n 0 -vv --maxfail=1 --cov=hermetic --cov-report=xml --cov-branch --junitxml=junit.xml -o junit_family=legacy --timeout=15 --session-timeout=600
 	$(VENV) bash ./scripts/basic_checks.sh
+	$(VENV) bash ./scripts/integration_tests.sh
 
 .PHONY: bugs
 bugs: fix-ci ruff mypy pylint bandit repro smoke
@@ -270,8 +273,10 @@ bandit-llm: uv-lock install-plugins
 
 .PHONY: smoke-llm
 smoke-llm: uv-lock install-plugins
-	@echo "=== smoke ==="
+	@echo "=== smoke (CLI) ==="
 	@$(NO_COLOR_ENV) $(VENV) bash ./scripts/basic_checks.sh 2>&1 | tail -30
+	@echo "=== smoke (Programmatic) ==="
+	@$(NO_COLOR_ENV) $(VENV) bash ./scripts/integration_tests.sh 2>&1 | tail -30
 
 .PHONY: check-llm
 check-llm: mypy-llm lint-llm bandit-llm test-llm smoke-llm
