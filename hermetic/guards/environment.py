@@ -4,7 +4,7 @@ import os
 import sys
 from collections.abc import Iterator, MutableMapping
 from textwrap import dedent
-from typing import Any
+from typing import Any, TypeVar, cast
 
 try:
     from typing import Never
@@ -17,8 +17,12 @@ _installed = False
 _originals: dict[str, Any] = {}
 
 
-class _GuardedEnviron(MutableMapping[str, str]):
-    def __init__(self, backing: MutableMapping[str, str], trace: bool = False) -> None:
+_KT = TypeVar("_KT")
+_VT = TypeVar("_VT")
+
+
+class _GuardedEnviron(MutableMapping[_KT, _VT]):
+    def __init__(self, backing: MutableMapping[_KT, _VT], trace: bool = False) -> None:
         self._backing = backing
         self._trace_enabled = trace
 
@@ -34,25 +38,25 @@ class _GuardedEnviron(MutableMapping[str, str]):
         self._trace("blocked environment mutation")
         raise PolicyViolation("environment mutation disabled")
 
-    def __getitem__(self, key: str) -> str:
+    def __getitem__(self, key: _KT) -> _VT:
         return self._deny_read()
 
-    def __setitem__(self, key: str, value: str) -> None:
+    def __setitem__(self, key: _KT, value: _VT) -> None:
         self._deny_write()
 
-    def __delitem__(self, key: str) -> None:
+    def __delitem__(self, key: _KT) -> None:
         self._deny_write()
 
-    def __iter__(self) -> Iterator[str]:  # pylint: disable=non-iterator-returned
+    def __iter__(self) -> Iterator[_KT]:  # pylint: disable=non-iterator-returned
         return self._deny_read()
 
     def __len__(self) -> int:  # pylint: disable=invalid-length-returned
         return self._deny_read()
 
-    def get(self, key: str, default: Any = None) -> Any:
+    def get(self, key: _KT, default: Any = None) -> Any:
         return self._deny_read()
 
-    def copy(self) -> dict[str, str]:
+    def copy(self) -> dict[_KT, _VT]:
         return self._deny_read()
 
     def items(self) -> Any:
@@ -67,17 +71,17 @@ class _GuardedEnviron(MutableMapping[str, str]):
     def __contains__(self, key: object) -> bool:
         return self._deny_read()
 
-    def pop(self, key: str, default: Any = None) -> Any:
+    def pop(self, key: _KT, default: Any = None) -> Any:
         return self._deny_write()
 
-    def popitem(self) -> tuple[str, str]:
+    def popitem(self) -> tuple[_KT, _VT]:
         return self._deny_write()
 
     def clear(self) -> None:
         self._deny_write()
 
-    def setdefault(self, key: str, default: Any = None) -> Any:
-        self._deny_write()
+    def setdefault(self, key: _KT, default: Any = None) -> Any:
+        return self._deny_write()
 
     def update(  # pylint: disable=arguments-differ,unused-argument
         self,  # pylint: disable=arguments-differ,unused-argument
@@ -113,11 +117,11 @@ def install(*, trace: bool = False) -> None:
         _trace("blocked environment mutation")
         raise PolicyViolation("environment mutation disabled")
 
-    os.environ = _GuardedEnviron(os.environ, trace=trace)  # type: ignore[assignment]
+    os.environ = cast(Any, _GuardedEnviron(os.environ, trace=trace))
     if hasattr(os, "environb"):
         _originals["os.environb"] = os.environb
-        os.environb = _GuardedEnviron(os.environb, trace=trace)
-    os.getenv = _deny_read  # type: ignore[assignment]
+        os.environb = cast(Any, _GuardedEnviron(os.environb, trace=trace))
+    os.getenv = cast(Any, _deny_read)
     os.putenv = _deny_write
     os.unsetenv = _deny_write
 
