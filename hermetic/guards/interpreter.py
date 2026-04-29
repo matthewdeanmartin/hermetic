@@ -32,25 +32,29 @@ class _GuardedList(list[Any]):
             )
         raise PolicyViolation(f"interpreter mutation disabled: {self._label}")
 
-    def append(self, item: Any) -> None:
+    def append(self, item: Any) -> None:  # pylint: disable=unused-argument
         self._deny()
 
-    def extend(self, values: Any) -> None:
+    def extend(self, values: Any) -> None:  # pylint: disable=unused-argument
         self._deny()
 
-    def insert(self, index: SupportsIndex, item: Any) -> None:
+    def insert(
+        self, index: SupportsIndex, item: Any  # pylint: disable=unused-argument
+    ) -> None:
         self._deny()
 
-    def pop(self, index: SupportsIndex = -1) -> Any:
+    def pop(self, index: SupportsIndex = -1) -> Any:  # pylint: disable=unused-argument
         return self._deny()
 
-    def remove(self, item: Any) -> None:
+    def remove(self, item: Any) -> None:  # pylint: disable=unused-argument
         self._deny()
 
     def clear(self) -> None:
         self._deny()
 
-    def sort(self, *args: Any, **kwargs: Any) -> None:
+    def sort(
+        self, *args: Any, **kwargs: Any  # pylint: disable=unused-argument
+    ) -> None:
         self._deny()
 
     def reverse(self) -> None:
@@ -93,16 +97,22 @@ class _GuardedDict(dict[Any, Any]):
     def clear(self) -> None:
         self._deny()
 
-    def pop(self, key: Any, default: Any = None) -> Any:
+    def pop(
+        self, key: Any, default: Any = None  # pylint: disable=unused-argument
+    ) -> Any:
         return self._deny()
 
     def popitem(self) -> tuple[Any, Any]:
         return self._deny()
 
-    def setdefault(self, key: Any, default: Any = None) -> Any:
+    def setdefault(
+        self, key: Any, default: Any = None  # pylint: disable=unused-argument
+    ) -> Any:
         self._deny()
 
-    def update(self, *args: Any, **kwargs: Any) -> None:
+    def update(
+        self, *args: Any, **kwargs: Any  # pylint: disable=unused-argument
+    ) -> None:
         self._deny()
 
 
@@ -125,15 +135,15 @@ def install(*, trace: bool = False) -> None:
         if trace:
             print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
-    def _deny_chdir(*a: Any, **k: Any) -> None:
+    def _deny_chdir(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
         _trace("blocked os.chdir")
         raise PolicyViolation("interpreter mutation disabled: chdir")
 
-    def _deny_fchdir(*a: Any, **k: Any) -> None:
+    def _deny_fchdir(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
         _trace("blocked os.fchdir")
         raise PolicyViolation("interpreter mutation disabled: fchdir")
 
-    def _deny_addsitedir(*a: Any, **k: Any) -> None:
+    def _deny_addsitedir(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
         _trace("blocked site.addsitedir")
         raise PolicyViolation("interpreter mutation disabled: addsitedir")
 

@@ -43,10 +43,10 @@ class _GuardedEnviron(MutableMapping[str, str]):
     def __delitem__(self, key: str) -> None:
         self._deny_write()
 
-    def __iter__(self) -> Iterator[str]:
+    def __iter__(self) -> Iterator[str]:  # pylint: disable=non-iterator-returned
         return self._deny_read()
 
-    def __len__(self) -> int:
+    def __len__(self) -> int:  # pylint: disable=invalid-length-returned
         return self._deny_read()
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -79,10 +79,14 @@ class _GuardedEnviron(MutableMapping[str, str]):
     def setdefault(self, key: str, default: Any = None) -> Any:
         self._deny_write()
 
-    def update(self, *args: Any, **kwargs: Any) -> None:
+    def update( # pylint: disable=arguments-differ,unused-argument
+        self, # pylint: disable=arguments-differ,unused-argument
+        *args: Any,  # pylint: disable=arguments-differ,unused-argument
+        **kwargs: Any,  # pylint: disable=arguments-differ,unused-argument
+    ) -> None:
         self._deny_write()
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pylint: disable=invalid-repr-returned
         return self._deny_read()
 
 
@@ -101,11 +105,11 @@ def install(*, trace: bool = False) -> None:
         if trace:
             print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
-    def _deny_read(*a: Any, **k: Any) -> None:
+    def _deny_read(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
         _trace("blocked environment read")
         raise PolicyViolation("environment disabled")
 
-    def _deny_write(*a: Any, **k: Any) -> None:
+    def _deny_write(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
         _trace("blocked environment mutation")
         raise PolicyViolation("environment mutation disabled")
 

@@ -2,12 +2,12 @@
 # This file makes the 'guards' directory a package.
 from typing import Any
 
+from . import imports_guard  # nosec
 from . import (
     code_exec,
     environment,
     filesystem,
-    imports_guard,  # nosec
-    interpreter,
+    interpreter,  # nosec
     network,
     subprocess_guard,
 )

@@ -15,7 +15,7 @@ _originals: dict[str, Any] = {}
 
 def _caller_name(depth: int = 1) -> str:
     try:
-        frame = sys._getframe(depth + 1)
+        frame = sys._getframe(depth + 1)  # pylint: disable=protected-access
     except ValueError:
         return ""
     return str(frame.f_globals.get("__name__", ""))
@@ -48,7 +48,7 @@ def install(*, trace: bool = False) -> None:
         if trace:
             print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
-    def _deny_eval(*a: Any, **k: Any) -> None:
+    def _deny_eval(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
         _trace("blocked eval")
         raise PolicyViolation("dynamic code execution disabled: eval")
 
