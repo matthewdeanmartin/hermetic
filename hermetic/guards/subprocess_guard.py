@@ -98,7 +98,7 @@ def install(*, trace: bool = False) -> None:
 
     def _trace(msg: str) -> None:
         if trace:
-            print(f"[hermetic] {msg}", flush=True)
+            print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
     def _raise(*a: Any, **k: Any) -> Never:  # pylint: disable=unused-argument
         _trace("blocked subprocess reason=no-subprocess")
@@ -153,21 +153,35 @@ BOOTSTRAP_CODE = dedent(
 if cfg.get("no_subprocess"):
     def _deny_exec(*a,**k): _tr("blocked subprocess reason=no-subprocess"); raise _HPolicy("subprocess disabled")
     targets = {
-        "subprocess": ("Popen", "run", "call", "check_output"),
-        "os": ("system", "execv", "execve", "execl", "execle", "execlp", "execlpe", "execvp", "execvpe", "fork", "forkpty", "spawnl", "spawnle", "spawnlp", "spawnlpe", "spawnv", "spawnve", "spawnvp", "spawnvpe"),
+        "subprocess": ("Popen", "run", "call", "check_output", "check_call", "getoutput", "getstatusoutput"),
+        "os": ("system", "execv", "execve", "execl", "execle", "execlp", "execlpe", "execvp", "execvpe", "fork", "forkpty", "spawnl", "spawnle", "spawnlp", "spawnlpe", "spawnv", "spawnve", "spawnvp", "spawnvpe", "posix_spawn", "posix_spawnp", "startfile"),
         "asyncio": ("create_subprocess_exec", "create_subprocess_shell"),
-        # C-level primitives — POSIX and Windows.
-        "_posixsubprocess": ("fork_exec",),
-        "_winapi": ("CreateProcess",),
     }
-    for mod_name, funcs in targets.items():
+    extra_modules = [
+        ("_posixsubprocess", ("fork_exec",)),
+        ("posix", ("fork", "forkpty", "system", "posix_spawn", "posix_spawnp")),
+        ("pty", ("fork", "spawn", "openpty")),
+        ("_winapi", ("CreateProcess",)),
+    ]
+    for mod_name, funcs in extra_modules:
         try:
             mod = __import__(mod_name)
-            for name in funcs:
-                if hasattr(mod, name):
-                    try: setattr(mod, name, _deny_exec)
-                    except (AttributeError, TypeError): pass
-        except ImportError:
-            pass
+        except Exception:
+            mod = None
+        if mod is not None:
+            targets[mod] = funcs
+    try:
+        import multiprocessing as _mp
+    except Exception:
+        _mp = None
+    for mod_name, funcs in targets.items():
+        mod = __import__(mod_name) if isinstance(mod_name, str) else mod_name
+        for name in funcs:
+            if hasattr(mod, name):
+                try: setattr(mod, name, _deny_exec)
+                except (AttributeError, TypeError): pass
+    if _mp is not None:
+        try: _mp.Process.start = _deny_exec
+        except (AttributeError, TypeError): pass
 """
 )

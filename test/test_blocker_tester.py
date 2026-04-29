@@ -16,9 +16,7 @@ def reset_blocker_state(monkeypatch):
     # Re-import to get the module; don't reload yet (we'll mutate state below).
     import hermetic.blocker as blocker
 
-    # Reset refcount & lock-guarded entered state.
-    # (_LOCK is a real RLock; we don't need to replace it, just zero the counter.)
-    blocker._REFCOUNT = 0  # noqa: SLF001
+    # Reset lock-guarded policy state.
     blocker._ACTIVE_CONFIGS.clear()  # noqa: SLF001
 
     calls = {
@@ -61,7 +59,6 @@ def reset_blocker_state(monkeypatch):
     yield types.SimpleNamespace(calls=calls, blocker=blocker)
 
     # Safety: if someone forgot to exit a context, emulate a final uninstall and reset.
-    blocker._REFCOUNT = 0  # noqa: SLF001
     blocker._ACTIVE_CONFIGS.clear()  # noqa: SLF001
 
 
@@ -145,7 +142,7 @@ def test_hermetic_blocker_calls_install_even_if_all_sections_disabled(
     assert len(R.calls["uninstall_all"]) == 2
 
 
-def test_nested_contexts_reference_counting_installs_once(reset_blocker_state):
+def test_nested_contexts_reapply_merged_policy(reset_blocker_state):
     R = reset_blocker_state
     # nest: each policy change re-applies the merged guard set
     with hermetic_blocker(block_network=True):

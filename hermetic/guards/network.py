@@ -4,6 +4,7 @@ from __future__ import annotations
 import errno
 import socket
 import ssl
+import sys
 from textwrap import dedent
 from typing import Any, Iterable, Set
 
@@ -69,7 +70,7 @@ def install(
 
     def _trace(msg: str) -> None:
         if trace:
-            print(f"[hermetic] {msg}", flush=True)
+            print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
     def _host_from(addr: Any) -> str:
         try:
@@ -250,10 +251,24 @@ if cfg.get("no_network"):
     _orig_gethostbyname = socket.gethostbyname
     _orig_gethostbyname_ex = socket.gethostbyname_ex
     _orig_wrap_socket = ssl.SSLContext.wrap_socket
+    if hasattr(socket, "socketpair"):
+        _orig_socketpair = socket.socketpair
+    if hasattr(socket, "fromfd"):
+        _orig_fromfd = socket.fromfd
+    if hasattr(socket, "fromshare"):
+        _orig_fromshare = socket.fromshare
 
     ALLOW_LOCAL = bool(cfg.get("allow_localhost"))
     ALLOW_DOMAINS = set([d.lower() for d in cfg.get("allow_domains", []) if d])
-    META = {"169.254.169.254", "metadata.google.internal"}
+    META = {
+        "169.254.169.254",
+        "metadata.google.internal",
+        "metadata",
+        "fd00:ec2::254",
+        "fd00:ec2:0:0:0:0:0:254",
+        "fe80::a9fe:a9fe",
+        "100.100.100.200",
+    }
     LOCAL = {"127.0.0.1","::1","localhost","0.0.0.0"} # nosec
 
     def _host_from(addr):
@@ -273,6 +288,13 @@ if cfg.get("no_network"):
         if ALLOW_LOCAL and h in LOCAL: return True
         return any(_domain_match(h, d) for d in ALLOW_DOMAINS)
 
+    def _bind_allowed(address):
+        host = _host_from(address)
+        h = _norm_host(host)
+        if not h: return True
+        if h in LOCAL: return True
+        return False
+
     class GuardedSocket(_orig_socket):
         def connect(self, address):
             host = _host_from(address)
@@ -286,6 +308,10 @@ if cfg.get("no_network"):
             host = _host_from(address)
             if _is_net_allowed(host): return super().sendto(data, address)
             _tr(f"blocked socket.sendto host={host}"); raise _HPolicy("network disabled")
+        def bind(self, address):
+            if _bind_allowed(address): return super().bind(address)
+            host = _host_from(address)
+            _tr(f"blocked socket.bind host={host}"); raise _HPolicy("network disabled")
         if hasattr(_orig_socket, "sendmsg"):
             def sendmsg(self, buffers, ancdata=(), flags=0, address=None):
                 host = _host_from(address)
@@ -312,6 +338,15 @@ if cfg.get("no_network"):
     def _guard_wrap_socket(self, sock, *a, **k):
         _tr("blocked ssl.wrap_socket"); raise _HPolicy("network disabled")
 
+    def _guard_socketpair(*a, **k):
+        _tr("blocked socket.socketpair"); raise _HPolicy("network disabled")
+
+    def _guard_fromfd(*a, **k):
+        _tr("blocked socket.fromfd"); raise _HPolicy("network disabled")
+
+    def _guard_fromshare(*a, **k):
+        _tr("blocked socket.fromshare"); raise _HPolicy("network disabled")
+
     socket.socket = GuardedSocket
     if _orig_socket_type is not None:
         socket.SocketType = GuardedSocket
@@ -320,5 +355,11 @@ if cfg.get("no_network"):
     socket.gethostbyname = _guard_gethostbyname
     socket.gethostbyname_ex = _guard_gethostbyname_ex
     ssl.SSLContext.wrap_socket = _guard_wrap_socket
+    if hasattr(socket, "socketpair"):
+        socket.socketpair = _guard_socketpair
+    if hasattr(socket, "fromfd"):
+        socket.fromfd = _guard_fromfd
+    if hasattr(socket, "fromshare"):
+        socket.fromshare = _guard_fromshare
 """
 )

@@ -25,7 +25,11 @@ class _GuardedList(list[Any]):
 
     def _deny(self) -> Never:
         if self._trace_enabled:
-            print(f"[hermetic] blocked {self._label} mutation", flush=True)
+            print(
+                f"[hermetic] blocked {self._label} mutation",
+                file=sys.stderr,
+                flush=True,
+            )
         raise PolicyViolation(f"interpreter mutation disabled: {self._label}")
 
     def append(self, item: Any) -> None:
@@ -73,7 +77,11 @@ class _GuardedDict(dict[Any, Any]):
 
     def _deny(self) -> Never:
         if self._trace_enabled:
-            print(f"[hermetic] blocked {self._label} mutation", flush=True)
+            print(
+                f"[hermetic] blocked {self._label} mutation",
+                file=sys.stderr,
+                flush=True,
+            )
         raise PolicyViolation(f"interpreter mutation disabled: {self._label}")
 
     def __setitem__(self, key: Any, value: Any) -> None:
@@ -115,7 +123,7 @@ def install(*, trace: bool = False) -> None:
 
     def _trace(msg: str) -> None:
         if trace:
-            print(f"[hermetic] {msg}", flush=True)
+            print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
     def _deny_chdir(*a: Any, **k: Any) -> None:
         _trace("blocked os.chdir")

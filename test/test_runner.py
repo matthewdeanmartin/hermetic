@@ -5,7 +5,12 @@ from hermetic.runner import config_to_flags, run
 
 
 def test_config_to_flags(default_guard_config):
-    cfg = GuardConfig(no_network=True, allow_domains=["example.com"], trace=True)
+    cfg = GuardConfig(
+        no_network=True,
+        allow_domains=["example.com"],
+        trace=True,
+        sealed=True,
+    )
     flags = config_to_flags(cfg)
     assert flags == {
         "no_network": True,
@@ -20,6 +25,7 @@ def test_config_to_flags(default_guard_config):
         "allow_domains": ["example.com"],
         "deny_imports": [],
         "trace": True,
+        "sealed": True,
     }
 
 

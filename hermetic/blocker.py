@@ -8,10 +8,8 @@ from typing import Any, Iterable, List, Optional
 
 from .guards import install_all, uninstall_all
 
-# Process-wide, reentrant reference count for guard activation.
-# Guards are global monkey-patches; we only uninstall when the outermost scope exits.
+# Process-wide merged policy state for guard activation.
 _LOCK = threading.RLock()
-_REFCOUNT = 0
 _ACTIVE_CONFIGS: list["BlockConfig"] = []
 # Sealed latch: once set, _reapply_guards_locked() refuses to weaken the
 # active policy and refuses to uninstall. The latch is per-process and
@@ -155,21 +153,18 @@ class _HermeticBlocker(
 
     # ---- sync protocol ----
     def __enter__(self) -> "_HermeticBlocker":
-        global _REFCOUNT, _SEALED
+        global _SEALED
         with _LOCK:
             _ACTIVE_CONFIGS.append(self.cfg)
             if self.cfg.sealed:
                 _SEALED = True
             _reapply_guards_locked()
-            _REFCOUNT += 1
             self._entered = True
         return self
 
     def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
-        global _REFCOUNT
         with _LOCK:
             if self._entered:
-                _REFCOUNT -= 1
                 self._entered = False
                 try:
                     _ACTIVE_CONFIGS.remove(self.cfg)

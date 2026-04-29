@@ -26,6 +26,7 @@ def config_to_flags(cfg: GuardConfig) -> Dict[str, Any]:
         "allow_domains": cfg.allow_domains,
         "deny_imports": cfg.deny_imports,
         "trace": cfg.trace,
+        "sealed": cfg.sealed,
     }
 
 

@@ -80,7 +80,7 @@ def install(*, fs_root: str | None = None, trace: bool = False) -> None:
 
     def _trace(msg: str) -> None:
         if trace:
-            print(f"[hermetic] {msg}", flush=True)
+            print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
     def _coerce_path(p: Any) -> str:
         try:
@@ -211,7 +211,12 @@ BOOTSTRAP_CODE = dedent(
 # --- fs readonly ---
 if cfg.get("fs_readonly"):
     ROOT = cfg.get("fs_root")
-    _o = {"open": builtins.open, "Popen": pathlib.Path.open, "os.open": os.open}
+    import io as _io
+    _o = {"open": builtins.open, "Path.open": pathlib.Path.open, "os.open": os.open, "io.open": _io.open}
+    for _native_mod_name in ("posix", "nt"):
+        _native_mod = sys.modules.get(_native_mod_name)
+        if _native_mod is not None and hasattr(_native_mod, "open"):
+            _o[f"{_native_mod_name}.open"] = _native_mod.open
     def _norm(p):
         try: import os as _os; return _os.path.realpath(p)
         except Exception: return p
@@ -219,8 +224,12 @@ if cfg.get("fs_readonly"):
         if not r: return False
         P, R = _norm(p), _norm(r)
         return P==R or P.startswith(R + ("/" if "/" in R else "\\"))
+    def _coerce_path(p):
+        try: return str(os.fspath(p))
+        except TypeError: return str(p)
     def _open_guard(f, mode="r", *a, **k):
-        path = str(f)
+        path = _coerce_path(f)
+        if not isinstance(mode, str): mode = "r"
         if any(m in mode for m in ("w","a","x","+")): _tr(f"blocked open write path={path}"); raise _HPolicy("fs readonly")
         if ROOT and not _within(path, ROOT): _tr(f"blocked open read-outside-root path={path}"); raise _HPolicy("read outside root")
         return _o["open"](f, mode, *a, **k)
@@ -232,6 +241,13 @@ if cfg.get("fs_readonly"):
     builtins.open = _open_guard
     pathlib.Path.open = lambda self,*a,**k: _open_guard(str(self), *a, **k)
     os.open = os_open_guard
+    try: _io.open = _open_guard
+    except (AttributeError, TypeError): pass
+    for _native_mod_name in ("posix", "nt"):
+        _native_mod = sys.modules.get(_native_mod_name)
+        if _native_mod is not None and hasattr(_native_mod, "open"):
+            try: setattr(_native_mod, "open", os_open_guard)
+            except (AttributeError, TypeError): pass
     def _deny_fs(*a,**k): _tr("blocked fs mutation"); raise _HPolicy("fs mutation disabled")
     for name in ("remove","rename","replace","unlink","rmdir","mkdir","makedirs","chmod","chown","link","symlink","truncate","utime"):
         if hasattr(os, name):
@@ -239,5 +255,14 @@ if cfg.get("fs_readonly"):
     for name in ("chmod","hardlink_to","mkdir","rename","replace","rmdir","symlink_to","touch","unlink"):
         if hasattr(pathlib.Path, name):
             setattr(pathlib.Path, name, _deny_fs)
+    try:
+        import shutil as _shutil
+    except Exception:
+        _shutil = None
+    if _shutil is not None:
+        for name in ("rmtree","move","copy","copy2","copyfile","copytree","chown","make_archive","unpack_archive"):
+            if hasattr(_shutil, name):
+                try: setattr(_shutil, name, _deny_fs)
+                except (AttributeError, TypeError): pass
 """
 )

@@ -2,7 +2,8 @@
 
 import pytest
 
-from hermetic.blocker import _REFCOUNT, BlockConfig, hermetic_blocker
+from hermetic import blocker as blocker_mod
+from hermetic.blocker import BlockConfig, hermetic_blocker
 
 
 def test_block_config_from_kwargs(default_block_config):
@@ -64,7 +65,6 @@ def test_with_hermetic_decorator():
     def test_func():
         return True
 
-    global _REFCOUNT
-    initial_refcount = _REFCOUNT
+    assert blocker_mod._ACTIVE_CONFIGS == []
     assert test_func() is True
-    assert _REFCOUNT == initial_refcount
+    assert blocker_mod._ACTIVE_CONFIGS == []

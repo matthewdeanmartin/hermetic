@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hermetic.bootstrap import write_sitecustomize
+from hermetic.bootstrap import _SITE_CUSTOMIZE, write_sitecustomize
 from hermetic.errors import BootstrapError, PolicyViolation
 from hermetic.guards import uninstall_all
 from hermetic.profiles import GuardConfig
@@ -151,10 +151,29 @@ def test_write_sitecustomize_error(mocker):
 
 
 def test_config_to_flags():
-    cfg = GuardConfig(no_network=True, trace=True)
+    cfg = GuardConfig(no_network=True, trace=True, sealed=True)
     flags = config_to_flags(cfg)
     assert flags["no_network"] is True
     assert flags["trace"] is True
+    assert flags["sealed"] is True
+
+
+def test_generated_bootstrap_includes_hardened_guard_surfaces():
+    for token in (
+        "def bind(self, address):",
+        "socket.socketpair = _guard_socketpair",
+        "socket.fromfd = _guard_fromfd",
+        "socket.fromshare = _guard_fromshare",
+        "100.100.100.200",
+        "check_call",
+        "getoutput",
+        "getstatusoutput",
+        "posix_spawn",
+        "import multiprocessing as _mp",
+        "import io as _io",
+        "copytree",
+    ):
+        assert token in _SITE_CUSTOMIZE
 
 
 def test_run_bootstrap_win32(mocker):
@@ -346,6 +365,28 @@ def test_run_bootstrap_unix_mocked(mocker):
 
     run("target", ["target", "arg1"], GuardConfig())
     assert mock_execve.called
+
+
+def test_run_bootstrap_forwards_sealed_flag(mocker):
+    mocker.patch("sys.platform", "linux")
+    mocker.patch(
+        "hermetic.runner.resolve",
+        return_value=TargetSpec(
+            module="mod",
+            attr="func",
+            mode="bootstrap",
+            exe_path="exe",
+            interp_path="interp",
+        ),
+    )
+    write_site = mocker.patch("hermetic.runner.write_sitecustomize", return_value="/tmp/site")
+    mocker.patch("os.execve")
+    mocker.patch("hermetic.runner.invoke_inprocess", return_value=0)
+
+    run("target", ["target", "arg1"], GuardConfig(sealed=True))
+
+    flags = write_site.call_args.args[0]
+    assert flags["sealed"] is True
 
 
 def test_about():

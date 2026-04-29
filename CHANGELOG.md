@@ -12,6 +12,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed for any bug fixes.
 - Security in case of vulnerabilities.
 
+## [Unreleased]
+
+### Fixed
+
+- Forwarded `sealed` into bootstrap-mode flag serialization so foreign
+  interpreter launches no longer silently drop sealed mode.
+- Restored bootstrap guard parity for the hardened network,
+  subprocess, and filesystem surfaces, including the missing socket,
+  process-spawn, `io.open`, and `shutil` protections.
+- Sent in-process trace output to stderr so traced guard failures no
+  longer pollute wrapped command stdout and now match bootstrap mode.
+- Removed dead `_REFCOUNT` bookkeeping from `hermetic.blocker` and
+  updated the related tests to rely on active policy state instead.
+
 ## [0.2.0] - 2026-04-28
 
 ### Added

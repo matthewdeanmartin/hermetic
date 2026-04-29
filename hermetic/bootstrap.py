@@ -159,10 +159,24 @@ _SITE_CUSTOMIZE = dedent(
         _orig_gethostbyname = socket.gethostbyname
         _orig_gethostbyname_ex = socket.gethostbyname_ex
         _orig_wrap_socket = ssl.SSLContext.wrap_socket
+        if hasattr(socket, "socketpair"):
+            _orig_socketpair = socket.socketpair
+        if hasattr(socket, "fromfd"):
+            _orig_fromfd = socket.fromfd
+        if hasattr(socket, "fromshare"):
+            _orig_fromshare = socket.fromshare
     
         ALLOW_LOCAL = bool(cfg.get("allow_localhost"))
         ALLOW_DOMAINS = set([d.lower() for d in cfg.get("allow_domains", []) if d])
-        META = {"169.254.169.254", "metadata.google.internal"}
+        META = {
+            "169.254.169.254",
+            "metadata.google.internal",
+            "metadata",
+            "fd00:ec2::254",
+            "fd00:ec2:0:0:0:0:0:254",
+            "fe80::a9fe:a9fe",
+            "100.100.100.200",
+        }
         LOCAL = {"127.0.0.1","::1","localhost","0.0.0.0"} # nosec
     
         def _host_from(addr):
@@ -182,6 +196,13 @@ _SITE_CUSTOMIZE = dedent(
             if ALLOW_LOCAL and h in LOCAL: return True
             return any(_domain_match(h, d) for d in ALLOW_DOMAINS)
     
+        def _bind_allowed(address):
+            host = _host_from(address)
+            h = _norm_host(host)
+            if not h: return True
+            if h in LOCAL: return True
+            return False
+    
         class GuardedSocket(_orig_socket):
             def connect(self, address):
                 host = _host_from(address)
@@ -195,6 +216,10 @@ _SITE_CUSTOMIZE = dedent(
                 host = _host_from(address)
                 if _is_net_allowed(host): return super().sendto(data, address)
                 _tr(f"blocked socket.sendto host={host}"); raise _HPolicy("network disabled")
+            def bind(self, address):
+                if _bind_allowed(address): return super().bind(address)
+                host = _host_from(address)
+                _tr(f"blocked socket.bind host={host}"); raise _HPolicy("network disabled")
             if hasattr(_orig_socket, "sendmsg"):
                 def sendmsg(self, buffers, ancdata=(), flags=0, address=None):
                     host = _host_from(address)
@@ -221,6 +246,15 @@ _SITE_CUSTOMIZE = dedent(
         def _guard_wrap_socket(self, sock, *a, **k):
             _tr("blocked ssl.wrap_socket"); raise _HPolicy("network disabled")
     
+        def _guard_socketpair(*a, **k):
+            _tr("blocked socket.socketpair"); raise _HPolicy("network disabled")
+    
+        def _guard_fromfd(*a, **k):
+            _tr("blocked socket.fromfd"); raise _HPolicy("network disabled")
+    
+        def _guard_fromshare(*a, **k):
+            _tr("blocked socket.fromshare"); raise _HPolicy("network disabled")
+    
         socket.socket = GuardedSocket
         if _orig_socket_type is not None:
             socket.SocketType = GuardedSocket
@@ -229,34 +263,59 @@ _SITE_CUSTOMIZE = dedent(
         socket.gethostbyname = _guard_gethostbyname
         socket.gethostbyname_ex = _guard_gethostbyname_ex
         ssl.SSLContext.wrap_socket = _guard_wrap_socket
+        if hasattr(socket, "socketpair"):
+            socket.socketpair = _guard_socketpair
+        if hasattr(socket, "fromfd"):
+            socket.fromfd = _guard_fromfd
+        if hasattr(socket, "fromshare"):
+            socket.fromshare = _guard_fromshare
     
     
     # --- subprocess ---
     if cfg.get("no_subprocess"):
         def _deny_exec(*a,**k): _tr("blocked subprocess reason=no-subprocess"); raise _HPolicy("subprocess disabled")
         targets = {
-            "subprocess": ("Popen", "run", "call", "check_output"),
-            "os": ("system", "execv", "execve", "execl", "execle", "execlp", "execlpe", "execvp", "execvpe", "fork", "forkpty", "spawnl", "spawnle", "spawnlp", "spawnlpe", "spawnv", "spawnve", "spawnvp", "spawnvpe"),
+            "subprocess": ("Popen", "run", "call", "check_output", "check_call", "getoutput", "getstatusoutput"),
+            "os": ("system", "execv", "execve", "execl", "execle", "execlp", "execlpe", "execvp", "execvpe", "fork", "forkpty", "spawnl", "spawnle", "spawnlp", "spawnlpe", "spawnv", "spawnve", "spawnvp", "spawnvpe", "posix_spawn", "posix_spawnp", "startfile"),
             "asyncio": ("create_subprocess_exec", "create_subprocess_shell"),
-            # C-level primitives — POSIX and Windows.
-            "_posixsubprocess": ("fork_exec",),
-            "_winapi": ("CreateProcess",),
         }
-        for mod_name, funcs in targets.items():
+        extra_modules = [
+            ("_posixsubprocess", ("fork_exec",)),
+            ("posix", ("fork", "forkpty", "system", "posix_spawn", "posix_spawnp")),
+            ("pty", ("fork", "spawn", "openpty")),
+            ("_winapi", ("CreateProcess",)),
+        ]
+        for mod_name, funcs in extra_modules:
             try:
                 mod = __import__(mod_name)
-                for name in funcs:
-                    if hasattr(mod, name):
-                        try: setattr(mod, name, _deny_exec)
-                        except (AttributeError, TypeError): pass
-            except ImportError:
-                pass
+            except Exception:
+                mod = None
+            if mod is not None:
+                targets[mod] = funcs
+        try:
+            import multiprocessing as _mp
+        except Exception:
+            _mp = None
+        for mod_name, funcs in targets.items():
+            mod = __import__(mod_name) if isinstance(mod_name, str) else mod_name
+            for name in funcs:
+                if hasattr(mod, name):
+                    try: setattr(mod, name, _deny_exec)
+                    except (AttributeError, TypeError): pass
+        if _mp is not None:
+            try: _mp.Process.start = _deny_exec
+            except (AttributeError, TypeError): pass
     
     
     # --- fs readonly ---
     if cfg.get("fs_readonly"):
         ROOT = cfg.get("fs_root")
-        _o = {"open": builtins.open, "Popen": pathlib.Path.open, "os.open": os.open}
+        import io as _io
+        _o = {"open": builtins.open, "Path.open": pathlib.Path.open, "os.open": os.open, "io.open": _io.open}
+        for _native_mod_name in ("posix", "nt"):
+            _native_mod = sys.modules.get(_native_mod_name)
+            if _native_mod is not None and hasattr(_native_mod, "open"):
+                _o[f"{_native_mod_name}.open"] = _native_mod.open
         def _norm(p):
             try: import os as _os; return _os.path.realpath(p)
             except Exception: return p
@@ -264,8 +323,12 @@ _SITE_CUSTOMIZE = dedent(
             if not r: return False
             P, R = _norm(p), _norm(r)
             return P==R or P.startswith(R + ("/" if "/" in R else "\\"))
+        def _coerce_path(p):
+            try: return str(os.fspath(p))
+            except TypeError: return str(p)
         def _open_guard(f, mode="r", *a, **k):
-            path = str(f)
+            path = _coerce_path(f)
+            if not isinstance(mode, str): mode = "r"
             if any(m in mode for m in ("w","a","x","+")): _tr(f"blocked open write path={path}"); raise _HPolicy("fs readonly")
             if ROOT and not _within(path, ROOT): _tr(f"blocked open read-outside-root path={path}"); raise _HPolicy("read outside root")
             return _o["open"](f, mode, *a, **k)
@@ -277,6 +340,13 @@ _SITE_CUSTOMIZE = dedent(
         builtins.open = _open_guard
         pathlib.Path.open = lambda self,*a,**k: _open_guard(str(self), *a, **k)
         os.open = os_open_guard
+        try: _io.open = _open_guard
+        except (AttributeError, TypeError): pass
+        for _native_mod_name in ("posix", "nt"):
+            _native_mod = sys.modules.get(_native_mod_name)
+            if _native_mod is not None and hasattr(_native_mod, "open"):
+                try: setattr(_native_mod, "open", os_open_guard)
+                except (AttributeError, TypeError): pass
         def _deny_fs(*a,**k): _tr("blocked fs mutation"); raise _HPolicy("fs mutation disabled")
         for name in ("remove","rename","replace","unlink","rmdir","mkdir","makedirs","chmod","chown","link","symlink","truncate","utime"):
             if hasattr(os, name):
@@ -284,6 +354,15 @@ _SITE_CUSTOMIZE = dedent(
         for name in ("chmod","hardlink_to","mkdir","rename","replace","rmdir","symlink_to","touch","unlink"):
             if hasattr(pathlib.Path, name):
                 setattr(pathlib.Path, name, _deny_fs)
+        try:
+            import shutil as _shutil
+        except Exception:
+            _shutil = None
+        if _shutil is not None:
+            for name in ("rmtree","move","copy","copy2","copyfile","copytree","chown","make_archive","unpack_archive"):
+                if hasattr(_shutil, name):
+                    try: setattr(_shutil, name, _deny_fs)
+                    except (AttributeError, TypeError): pass
     
     
     # --- interpreter mutation ---

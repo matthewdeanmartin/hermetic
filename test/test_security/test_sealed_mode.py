@@ -19,7 +19,6 @@ def _reset_seal_latch():
     yield
     _blocker_mod._SEALED = False
     _blocker_mod._ACTIVE_CONFIGS.clear()
-    _blocker_mod._REFCOUNT = 0
     uninstall_all()
 
 

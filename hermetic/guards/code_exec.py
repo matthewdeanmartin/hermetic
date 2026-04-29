@@ -46,7 +46,7 @@ def install(*, trace: bool = False) -> None:
 
     def _trace(msg: str) -> None:
         if trace:
-            print(f"[hermetic] {msg}", flush=True)
+            print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
     def _deny_eval(*a: Any, **k: Any) -> None:
         _trace("blocked eval")

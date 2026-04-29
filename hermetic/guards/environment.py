@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from collections.abc import Iterator, MutableMapping
 from textwrap import dedent
 from typing import Any
@@ -23,7 +24,7 @@ class _GuardedEnviron(MutableMapping[str, str]):
 
     def _trace(self, msg: str) -> None:
         if self._trace_enabled:
-            print(f"[hermetic] {msg}", flush=True)
+            print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
     def _deny_read(self) -> Never:
         self._trace("blocked environment read")
@@ -98,7 +99,7 @@ def install(*, trace: bool = False) -> None:
 
     def _trace(msg: str) -> None:
         if trace:
-            print(f"[hermetic] {msg}", flush=True)
+            print(f"[hermetic] {msg}", file=sys.stderr, flush=True)
 
     def _deny_read(*a: Any, **k: Any) -> None:
         _trace("blocked environment read")
