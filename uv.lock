@@ -1065,6 +1065,9 @@ wheels = [
 name = "hermetic-seal"
 version = "0.2.0"
 source = { editable = "." }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -1111,6 +1114,7 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "typing-extensions", marker = "python_full_version < '3.11'" }]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1139,7 +1143,6 @@ dev = [
     { name = "pylint" },
     { name = "pylint", marker = "python_full_version >= '3.8'" },
     { name = "pytest", specifier = ">=6.0.1" },
-    { name = "pytest", marker = "python_full_version >= '3.8'" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov", specifier = ">=2.10.1" },
     { name = "pytest-cov", marker = "python_full_version >= '3.8'" },

@@ -115,9 +115,6 @@ def main(argv: List[str] | None = None) -> int:
         return 0
 
     cfg = parse_hermetic_args(split.hermetic_argv)
-    # target argv after `--` must exist
-    if not split.target_argv:
-        raise SystemExit("usage error: missing target after `--`")
     target = split.target_argv[0]
     target_argv = split.target_argv
     return run(target, target_argv, cfg)

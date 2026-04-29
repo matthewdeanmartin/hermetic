@@ -80,7 +80,14 @@ def resolve(target: str) -> TargetSpec:
     if exe:
         sheb = _script_shebang(exe)
         name = os.path.basename(exe).lower()
-        looks_like_python = name in {"python", "python.exe", "py", "py.exe"}
+        looks_like_python = name in {
+            "python",
+            "python.exe",
+            "python3",
+            "python3.exe",
+            "py",
+            "py.exe",
+        }
         if looks_like_python or (sheb and "python" in os.path.basename(sheb).lower()):
             # We can bootstrap by injecting sitecustomize.
             return TargetSpec(

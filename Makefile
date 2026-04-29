@@ -99,7 +99,7 @@ black:
 .PHONY: ruff-fix
 ruff-fix:
 	@echo "Auto-fixing with ruff"
-	$(VENV) ruff check --fix .
+	$(VENV) ruff check --fix hermetic
 
 .PHONY: sync-metadata
 sync-metadata:
@@ -116,7 +116,7 @@ format-check: uv-lock install-plugins
 	@echo "Checking formatter drift"
 	$(NO_COLOR_ENV) $(VENV) isort --check-only .
 	$(NO_COLOR_ENV) $(VENV) black --check hermetic test
-	$(NO_COLOR_ENV) $(VENV) ruff check .
+	$(NO_COLOR_ENV) $(VENV) ruff check hermetic
 
 .PHONY: fix-ci
 fix-ci: format-check
@@ -124,7 +124,7 @@ fix-ci: format-check
 .PHONY: ruff-only
 ruff-only:
 	@echo "Running ruff"
-	$(VENV) ruff check .
+	$(VENV) ruff check hermetic
 
 .PHONY: ruff
 ruff: uv-lock install-plugins ruff-only
