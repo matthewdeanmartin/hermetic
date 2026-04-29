@@ -43,6 +43,7 @@ isort: init-build-history
 black: isort init-build-history
     @echo "Formatting code"
     {{venv}} metametameta pep621
+    {{venv}} python scripts/build_bootstrap.py
     {{venv}} black hermetic
     {{venv}} black test
     {{venv}} git2md hermetic --ignore __init__.py __pycache__ --output SOURCE.md

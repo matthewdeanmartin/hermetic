@@ -41,7 +41,7 @@ from .errors import BootstrapError
 _SITE_CUSTOMIZE = dedent(
     r'''
     # --- BOOTSTRAP START ---
-    import os, sys, json, socket, ssl, subprocess, asyncio, builtins, importlib.machinery as mach, pathlib, time, errno
+    import os, sys, json, socket, ssl, subprocess, asyncio, builtins, importlib.machinery as mach, pathlib, time, errno, atexit, shutil
 
     class _HPolicy(RuntimeError): pass
 
@@ -63,7 +63,14 @@ _SITE_CUSTOMIZE = dedent(
 
     sys.excepthook = _hermetic_excepthook
 
+    # Clean up the temporary sitecustomize directory on exit.
+    # Since this is sitecustomize, __file__ is the path to this file.
+    _site_dir = os.path.dirname(__file__)
+    if os.path.basename(_site_dir).startswith("hermetic_site_"):
+        atexit.register(lambda: shutil.rmtree(_site_dir, ignore_errors=True))
+
     cfg = json.loads(os.environ.pop("HERMETIC_FLAGS_JSON", "{{}}"))
+
     trace = bool(cfg.get("trace"))
     def _tr(msg):
         if trace:

@@ -46,6 +46,7 @@ def run(target: str, target_argv: List[str], cfg: GuardConfig) -> int:
             # On Windows, os.execve is not a true process replacement.
             # Use subprocess.run to spawn the child, wait for it, and exit
             # with its return code. This is more idiomatic for Windows.
+            import shutil
             import subprocess  # nosec
 
             try:
@@ -59,6 +60,9 @@ def run(target: str, target_argv: List[str], cfg: GuardConfig) -> int:
             except FileNotFoundError:
                 print(f"hermetic: command not found: {spec.exe_path}", file=sys.stderr)
                 return 127  # Standard exit code for "command not found"
+            finally:
+                # Cleanup temporary site directory on Windows since we waited.
+                shutil.rmtree(site_dir, ignore_errors=True)
         else:
             # On Unix-like systems, replace the current process for a seamless handoff.
             # This is the original, desired behavior for Linux/macOS.

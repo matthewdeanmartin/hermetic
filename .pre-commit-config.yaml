@@ -36,3 +36,11 @@ repos:
     hooks:
       - id: python-no-log-warn
       - id: text-unicode-replacement-char
+  - repo: local
+    hooks:
+      - id: build-bootstrap
+        name: build-bootstrap
+        entry: uv run python scripts/build_bootstrap.py
+        language: system
+        files: ^hermetic/guards/.*\.py$|^scripts/build_bootstrap\.py$
+        pass_filenames: false

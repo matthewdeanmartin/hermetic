@@ -105,6 +105,7 @@ ruff-fix:
 sync-metadata:
 	@echo "Syncing generated metadata"
 	$(VENV) metametameta pep621
+	$(VENV) python scripts/build_bootstrap.py
 	$(VENV) python -c "with open('hermetic/__about__.py', 'a') as f: f.write('\n')"
 
 
