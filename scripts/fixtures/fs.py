@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 
 path = sys.argv[1] if len(sys.argv) > 1 else "test_file.txt"
 print(f"Attempting to write to {path}...")

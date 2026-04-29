@@ -1,7 +1,9 @@
-import sys
 import socket
+import sys
+
 from hermetic import hermetic_blocker
 from hermetic.errors import PolicyViolation
+
 
 def test_net(host="example.com"):
     print(f"Attempting to connect to {host}...")

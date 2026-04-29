@@ -1,6 +1,8 @@
 import sys
+
 from hermetic import hermetic_blocker
 from hermetic.errors import PolicyViolation
+
 
 def test_interp_mutation():
     print("Attempting to modify sys.path...")

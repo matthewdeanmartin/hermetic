@@ -1,5 +1,5 @@
-import sys
 import socket
+import sys
 
 target_host = sys.argv[1] if len(sys.argv) > 1 else "example.com"
 if "://" in target_host:

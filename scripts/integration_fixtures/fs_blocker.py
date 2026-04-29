@@ -1,7 +1,9 @@
-import sys
 import os
+import sys
+
 from hermetic import hermetic_blocker
 from hermetic.errors import PolicyViolation
+
 
 def test_write(path="test_blocker.txt"):
     print(f"Attempting to write to {path}...")

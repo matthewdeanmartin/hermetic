@@ -1,7 +1,9 @@
-import sys
 import subprocess
+import sys
+
 from hermetic import hermetic_blocker
 from hermetic.errors import PolicyViolation
+
 
 def test_subproc():
     print("Attempting to run subprocess...")

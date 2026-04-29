@@ -1,6 +1,8 @@
 import sys
+
 from hermetic import hermetic_blocker
 from hermetic.errors import PolicyViolation
+
 
 def test_deny_import():
     print("Attempting to import math...")

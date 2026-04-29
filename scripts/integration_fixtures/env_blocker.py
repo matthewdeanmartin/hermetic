@@ -1,7 +1,9 @@
-import sys
 import os
+import sys
+
 from hermetic import hermetic_blocker
 from hermetic.errors import PolicyViolation
+
 
 def test_env_read():
     print("Attempting to read environment...")

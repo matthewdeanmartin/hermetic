@@ -8,7 +8,7 @@ import os
 import tempfile
 from textwrap import dedent
 from typing import Dict, Any
-from hermetic.errors import BootstrapError
+from .errors import BootstrapError
 
 # Minimal bootstrap sitecustomize that installs guards without requiring hermetic package to be importable.
 # Encodes guards inline to survive foreign interpreters/venvs.
