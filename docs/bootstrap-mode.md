@@ -30,17 +30,17 @@ installed in the parent environment (or in a different `pipx` venv).
 1. Hermetic writes a `sitecustomize.py` to a fresh temp directory.
    The file contains an inlined, dependency-free copy of the
    guard installation code.
-2. The selected guards are serialized as JSON into the environment
+1. The selected guards are serialized as JSON into the environment
    variable `HERMETIC_FLAGS_JSON`.
-3. The temp directory is prepended to `PYTHONPATH`.
-4. The target executable is launched (POSIX: `os.execve` —
+1. The temp directory is prepended to `PYTHONPATH`.
+1. The target executable is launched (POSIX: `os.execve` —
    replaces the current process; Windows: `subprocess.run` then
    propagate exit code).
-5. The target interpreter starts up, `sitecustomize.py` runs
+1. The target interpreter starts up, `sitecustomize.py` runs
    automatically (Python's standard startup mechanism), reads
    `HERMETIC_FLAGS_JSON`, installs the guards, then deletes the
    env var so it doesn't leak to grandchild processes.
-6. The target's entry point runs as it normally would, now with
+1. The target's entry point runs as it normally would, now with
    guards active.
 
 The temp directory is **not** cleaned up. It's a few KB of text
@@ -110,8 +110,8 @@ If something looks wrong:
 
 1. Check that the target's interpreter has read access to the
    temp directory.
-2. Check that the target isn't overriding `PYTHONPATH` itself.
-3. Make sure the target uses an entry-point `sitecustomize` —
+1. Check that the target isn't overriding `PYTHONPATH` itself.
+1. Make sure the target uses an entry-point `sitecustomize` —
    some unusual Python distributions disable site customization.
 
 ## Limitations

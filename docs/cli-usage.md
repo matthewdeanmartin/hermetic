@@ -20,12 +20,12 @@ treats the call as help-only and prints help, then exits.
 1. **`module:attr`** — `pkg.module:callable`. Imports the module and
    invokes the callable, or runs the module as `__main__` if `attr`
    is not callable.
-2. **Console script** — anything registered under
+1. **Console script** — anything registered under
    `console_scripts` entry points in any installed distribution.
    `http`, `black`, `pytest`, `mytool`, etc.
-3. **Executable on PATH** — `python`, `py.exe`, or any script with a
+1. **Executable on PATH** — `python`, `py.exe`, or any script with a
    Python shebang.
-4. **Module name fallback** — runs as `python -m <TARGET>`.
+1. **Module name fallback** — runs as `python -m <TARGET>`.
 
 If the resolved console script lives in a *different* Python
 interpreter (typical for `pipx`-installed tools), hermetic switches

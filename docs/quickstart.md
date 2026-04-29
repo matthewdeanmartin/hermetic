@@ -71,8 +71,7 @@ denied.
 hermetic --profile block-all -- my_analyzer.py --input data.csv
 ```
 
-The `block-all` [profile](profiles.md) bundles `--no-network
---no-subprocess --fs-readonly --block-native`. Use it when you have
+The `block-all` [profile](profiles.md) bundles `--no-network --no-subprocess --fs-readonly --block-native`. Use it when you have
 no idea what your target wants and you want to find out the loud way.
 
 ## 6. Use the context manager

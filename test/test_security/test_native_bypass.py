@@ -1,4 +1,5 @@
 """Phase 1 hardening tests: ctypes / cffi import & attribute denial."""
+
 from __future__ import annotations
 
 import sys

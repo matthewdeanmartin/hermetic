@@ -41,7 +41,7 @@ _CTYPES_UTIL_ATTRS = ("find_library", "find_msvcrt")
 _CFFI_ATTRS = ("FFI", "dlopen", "verify")
 
 
-def _deny_use(name: str):
+def _deny_use(name: str) -> Any:
     raise PolicyViolation(f"native interface blocked: {name}")
 
 
@@ -81,7 +81,7 @@ def _invalidate_finder_caches() -> None:
         pass
 
 
-def install(*, trace: bool = False, block_subprocess_libs: bool = False):
+def install(*, trace: bool = False, block_subprocess_libs: bool = False) -> None:
     """Deny native extension imports and FFI modules.
 
     Set `block_subprocess_libs=True` to additionally deny imports of
@@ -100,34 +100,40 @@ def install(*, trace: bool = False, block_subprocess_libs: bool = False):
     if block_subprocess_libs:
         deny_names |= _SUBPROC_REPLACEMENT_NAMES
 
-    def _trace(msg: str):
+    def _trace(msg: str) -> None:
         if trace:
             print(f"[hermetic] {msg}", flush=True)
 
-    class GuardedExtLoader(mach.ExtensionFileLoader):  # type: ignore[misc]
-        def create_module(self, spec):
+    class GuardedExtLoader(mach.ExtensionFileLoader):
+        def create_module(self, spec: Any) -> Any:
             _trace(f"blocked native import spec={spec.name}")
             raise PolicyViolation(f"native import blocked: {spec.name}")
 
-    def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+    def guarded_import(
+        name: str,
+        globals: Any = None,
+        locals: Any = None,
+        fromlist: Any = (),
+        level: int = 0,
+    ) -> Any:
         root = name.split(".", 1)[0]
         if root in deny_names:
             _trace(f"blocked import name={name}")
             raise PolicyViolation(f"import blocked: {name}")
         return _originals["__import__"](name, globals, locals, fromlist, level)
 
-    mach.ExtensionFileLoader = GuardedExtLoader  # type: ignore[assignment]
-    builtins.__import__ = guarded_import  # type: ignore[assignment]
+    mach.ExtensionFileLoader = GuardedExtLoader  # type: ignore[misc]
+    builtins.__import__ = guarded_import
     _patch_loaded_native_modules()
     _invalidate_finder_caches()
 
 
-def uninstall():
+def uninstall() -> None:
     global _installed
     if not _installed:
         return
-    mach.ExtensionFileLoader = _originals.pop("ExtLoader")  # type: ignore[assignment]
-    builtins.__import__ = _originals.pop("__import__")  # type: ignore[assignment]
+    mach.ExtensionFileLoader = _originals.pop("ExtLoader")  # type: ignore[misc]
+    builtins.__import__ = _originals.pop("__import__")
     for key in list(_originals):
         mod_name, attr = key.split(".", 1)
         mod = sys.modules.get(mod_name)

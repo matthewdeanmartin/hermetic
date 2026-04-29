@@ -1,4 +1,5 @@
 """Phase 5 hardening tests: sealed mode prevents in-process uninstall."""
+
 from __future__ import annotations
 
 import socket

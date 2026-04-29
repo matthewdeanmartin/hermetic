@@ -8,7 +8,7 @@ import re
 import runpy
 import sys
 from dataclasses import dataclass
-from typing import Any, Optional, Tuple
+from typing import Any, Iterable, Optional, Tuple
 
 from .util import which
 
@@ -26,6 +26,7 @@ class TargetSpec:
 
 def _console_entry(name: str) -> Optional[Tuple[str, str]]:
     eps = importlib.metadata.entry_points()
+    group: Iterable[importlib.metadata.EntryPoint]
     try:
         group = eps.select(group="console_scripts")
     except Exception:
@@ -94,7 +95,7 @@ def resolve(target: str) -> TargetSpec:
     return TargetSpec(module=target, attr="__main__", mode="inprocess")
 
 
-def invoke_inprocess(spec: TargetSpec) -> dict[Any, Any]:
+def invoke_inprocess(spec: TargetSpec) -> Any:
     sys.modules.pop(spec.module, None)  # ensure fresh import after guards
     if spec.attr == "__main__":
         return runpy.run_module(spec.module, run_name="__main__")

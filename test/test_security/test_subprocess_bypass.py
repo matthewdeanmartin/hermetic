@@ -1,4 +1,5 @@
 """Phase 3 hardening tests: _posixsubprocess and shutil-style entry points."""
+
 from __future__ import annotations
 
 import os
@@ -31,9 +32,28 @@ def test_posixsubprocess_blocked():
         with pytest.raises(PolicyViolation, match="subprocess"):
             # Doesn't matter what args — call should be intercepted.
             _posixsubprocess.fork_exec(
-                [b"/bin/true"], [b"/bin/true"], True, (), None, None,
-                -1, -1, -1, -1, -1, -1, -1, -1, False, False, None,
-                None, None, -1, None, False,
+                [b"/bin/true"],
+                [b"/bin/true"],
+                True,
+                (),
+                None,
+                None,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                False,
+                False,
+                None,
+                None,
+                None,
+                -1,
+                None,
+                False,
             )
     finally:
         uninstall()

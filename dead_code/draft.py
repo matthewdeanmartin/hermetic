@@ -18,8 +18,7 @@ import importlib.metadata
 import runpy
 import socket
 import sys
-import types
-from typing import Iterable, Sequence, Set
+from typing import Iterable, Sequence
 
 
 class NetworkBlockedError(RuntimeError):
@@ -195,7 +194,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         except NetworkBlockedError as e:
             print(f"envelope: blocked network call: {e}", file=sys.stderr)
             return 2
-        except Exception as e:
+        except Exception:
             # If the target raised something else, re-raise after tearing down guard so tracebacks are not masked
             raise
     finally:
@@ -205,6 +204,6 @@ def main(argv: Sequence[str] | None = None) -> int:
 if __name__ == "__main__":
     try:
         sys.exit(main())
-    except Exception as e:
+    except Exception:
         # let full traceback print
         raise

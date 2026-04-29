@@ -10,6 +10,15 @@ classifiers = [
     "Development Status :: 1 - Planning",
 ]
 
+[project.urls]
+Repository = "https://gitlab.com/matthewdeanmartin/hermetic"
+Documentation = "https://hermetic.readthedocs.io/en/latest/"
+Changelog = "https://gitlab.com/matthewdeanmartin/hermetic/blob/main/CHANGELOG.md"
+
+homepage = "https://gitlab.com/matthewdeanmartin/hermetic"
+issues = "https://gitlab.com/matthewdeanmartin/hermetic/issues/"
+
+
 [project.scripts]
 hermetic = "hermetic.cli:main"
 

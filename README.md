@@ -18,14 +18,14 @@ Use the `hermetic` command to run any Python console script, separating its argu
 
 #### Common Flags:
 
-  - `--no-network`: Disable all network activity.
-  - `--allow-localhost`: Allows network connections to localhost (used with `--no-network`).
-  - `--allow-domain <domain>`: Allows connections to a specific domain (repeatable).
-  - `--no-subprocess`: Disable creating new processes.
-  - `--fs-readonly[=/path/to/root]`: Make the filesystem read-only. Optionally, restrict all reads to be within the specified root directory.
-  - `--block-native`: Block imports of native C extensions.
-  - `--profile <name>`: Apply a pre-configured profile (e.g., `block-all`).
-  - `--trace`: Print a message to stderr when an action is blocked.
+- `--no-network`: Disable all network activity.
+- `--allow-localhost`: Allows network connections to localhost (used with `--no-network`).
+- `--allow-domain <domain>`: Allows connections to a specific domain (repeatable).
+- `--no-subprocess`: Disable creating new processes.
+- `--fs-readonly[=/path/to/root]`: Make the filesystem read-only. Optionally, restrict all reads to be within the specified root directory.
+- `--block-native`: Block imports of native C extensions.
+- `--profile <name>`: Apply a pre-configured profile (e.g., `block-all`).
+- `--trace`: Print a message to stderr when an action is blocked.
 
 #### CLI Examples:
 
@@ -52,7 +52,7 @@ $ hermetic --fs-readonly=./sandbox -- python my_script.py
 $ hermetic --profile block-all -- my_analyzer.py --input data.csv
 ```
 
------
+______________________________________________________________________
 
 ### Programmatic API
 
@@ -125,11 +125,11 @@ Real sandboxing is running your code in a docker container.
 
 This technique of monkey-patching for isolation is well-established, particularly in the testing ecosystem.
 
-  - [pytest-socket](https://pypi.org/project/pytest-socket/): Disables sockets during tests.
-  - [pytest-network](https://pypi.org/project/pytest-network/): Disables networking during tests.
+- [pytest-socket](https://pypi.org/project/pytest-socket/): Disables sockets during tests.
+- [pytest-network](https://pypi.org/project/pytest-network/): Disables networking during tests.
 
 For stronger sandboxing, consider:
 
-  - [pysandbox](https://github.com/vstinner/pysandbox): Uses Linux `seccomp` for kernel-level syscall filtering.
-  - [RestrictedPython](https://pypi.org/project/RestrictedPython/): Rewrites Python AST to enforce constraints.
-  - [Docker](https://www.docker.com/): OS-level virtualization.
+- [pysandbox](https://github.com/vstinner/pysandbox): Uses Linux `seccomp` for kernel-level syscall filtering.
+- [RestrictedPython](https://pypi.org/project/RestrictedPython/): Rewrites Python AST to enforce constraints.
+- [Docker](https://www.docker.com/): OS-level virtualization.

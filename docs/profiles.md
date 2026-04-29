@@ -113,8 +113,7 @@ with hermetic_blocker(**DEFAULT_POLICY):
 
 ## Profile reference (for tool authors)
 
-Profiles are defined in `hermetic/profiles.py` as a `dict[str,
-GuardConfig]`. The merge logic is:
+Profiles are defined in `hermetic/profiles.py` as a `dict[str, GuardConfig]`. The merge logic is:
 
 ```python
 # pseudo-code

@@ -34,7 +34,7 @@ class BlockConfig:
     sealed: bool = False
 
     @classmethod
-    def from_kwargs(cls, **kw) -> "BlockConfig":
+    def from_kwargs(cls, **kw: Any) -> "BlockConfig":
         # Accept both long and short kw names
         mapping = {
             "block_network": "block_network",
@@ -49,7 +49,7 @@ class BlockConfig:
             "trace": "trace",
             "sealed": "sealed",
         }
-        data = {}
+        data: dict[str, Any] = {}
         for k, v in kw.items():
             if k not in mapping:
                 raise TypeError(f"Unknown argument: {k}")
@@ -112,7 +112,7 @@ def _reapply_guards_locked() -> None:
         _install_for_config(_effective_config())
 
 
-class _HermeticBlocker(ContextDecorator, AbstractAsyncContextManager):
+class _HermeticBlocker(ContextDecorator, AbstractAsyncContextManager["_HermeticBlocker"]):
     """
     Context manager / decorator to install hermetic guards for the current process.
 

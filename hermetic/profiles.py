@@ -19,7 +19,9 @@ class GuardConfig:
 
 
 PROFILES: dict[str, GuardConfig] = {
-    "block-all": GuardConfig(block_native=True,no_subprocess=True,no_network=True,fs_readonly=True),
+    "block-all": GuardConfig(
+        block_native=True, no_subprocess=True, no_network=True, fs_readonly=True
+    ),
     "net-hermetic": GuardConfig(no_network=True, allow_localhost=True),
     "exec-deny": GuardConfig(no_subprocess=True),
     "fs-readonly": GuardConfig(fs_readonly=True),

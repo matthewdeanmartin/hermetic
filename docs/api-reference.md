@@ -14,20 +14,20 @@ from hermetic import hermetic_blocker, with_hermetic
 ```
 
 ::: hermetic
-    options:
-      members:
-        - hermetic_blocker
-        - with_hermetic
-        - __version__
+options:
+members:
+\- hermetic_blocker
+\- with_hermetic
+\- __version__
 
 ## Blocker (`hermetic.blocker`)
 
 ::: hermetic.blocker
-    options:
-      members:
-        - hermetic_blocker
-        - with_hermetic
-        - BlockConfig
+options:
+members:
+\- hermetic_blocker
+\- with_hermetic
+\- BlockConfig
 
 ## Errors (`hermetic.errors`)
 
@@ -36,44 +36,44 @@ from hermetic import hermetic_blocker, with_hermetic
 ## Profiles (`hermetic.profiles`)
 
 ::: hermetic.profiles
-    options:
-      members:
-        - GuardConfig
-        - PROFILES
-        - apply_profile
+options:
+members:
+\- GuardConfig
+\- PROFILES
+\- apply_profile
 
 ## CLI (`hermetic.cli`)
 
 ::: hermetic.cli
-    options:
-      members:
-        - main
-        - build_parser
-        - parse_hermetic_args
+options:
+members:
+\- main
+\- build_parser
+\- parse_hermetic_args
 
 ## Runner (`hermetic.runner`)
 
 ::: hermetic.runner
-    options:
-      members:
-        - run
-        - config_to_flags
+options:
+members:
+\- run
+\- config_to_flags
 
 ## Resolver (`hermetic.resolver`)
 
 ::: hermetic.resolver
-    options:
-      members:
-        - TargetSpec
-        - resolve
-        - invoke_inprocess
+options:
+members:
+\- TargetSpec
+\- resolve
+\- invoke_inprocess
 
 ## Bootstrap (`hermetic.bootstrap`)
 
 ::: hermetic.bootstrap
-    options:
-      members:
-        - write_sitecustomize
+options:
+members:
+\- write_sitecustomize
 
 ## Guards
 
@@ -85,39 +85,39 @@ use the public API above.
 ### `hermetic.guards`
 
 ::: hermetic.guards
-    options:
-      members:
-        - install_all
-        - uninstall_all
+options:
+members:
+\- install_all
+\- uninstall_all
 
 ### `hermetic.guards.network`
 
 ::: hermetic.guards.network
-    options:
-      members:
-        - install
-        - uninstall
+options:
+members:
+\- install
+\- uninstall
 
 ### `hermetic.guards.subprocess_guard`
 
 ::: hermetic.guards.subprocess_guard
-    options:
-      members:
-        - install
-        - uninstall
+options:
+members:
+\- install
+\- uninstall
 
 ### `hermetic.guards.filesystem`
 
 ::: hermetic.guards.filesystem
-    options:
-      members:
-        - install
-        - uninstall
+options:
+members:
+\- install
+\- uninstall
 
 ### `hermetic.guards.imports_guard`
 
 ::: hermetic.guards.imports_guard
-    options:
-      members:
-        - install
-        - uninstall
+options:
+members:
+\- install
+\- uninstall

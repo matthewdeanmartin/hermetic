@@ -72,17 +72,17 @@ arrive transitively via mkdocs.
    python -m venv /tmp/hverify
    /tmp/hverify/bin/pip install hermetic-seal==<VERSION>
    ```
-2. Confirm zero dependencies installed beyond `hermetic-seal`:
+1. Confirm zero dependencies installed beyond `hermetic-seal`:
    ```bash
    /tmp/hverify/bin/pip list
    ```
    You should see only `pip`, `setuptools`, `hermetic-seal`, and
    nothing else hermetic-related.
-3. Confirm the version:
+1. Confirm the version:
    ```bash
    /tmp/hverify/bin/hermetic --version
    ```
-4. Cross-check the wheel contents against the published release:
+1. Cross-check the wheel contents against the published release:
    ```bash
    /tmp/hverify/bin/python -m zipfile -l "$(pip show -f hermetic-seal | head)"
    ```

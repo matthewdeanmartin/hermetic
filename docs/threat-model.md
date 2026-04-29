@@ -73,8 +73,7 @@ mitigated to some degree but not eliminated.
 
 ### Captured references
 
-- Any module that did `from socket import socket` (or `from
-  subprocess import Popen`, etc.) **before hermetic installed**
+- Any module that did `from socket import socket` (or `from subprocess import Popen`, etc.) **before hermetic installed**
   holds the original callable in its dict. Hermetic's
   monkey-patches replace the *attribute on the source module*,
   not every existing reference. `urllib3` keeps an internal pool
@@ -136,9 +135,9 @@ If you have an actual untrusted-code problem, layer:
 
 1. **OS sandbox** (container, `gVisor`, Windows Sandbox, AppArmor,
    `seccomp`). This is the actual security boundary.
-2. **Hermetic with `--seal`** inside the sandbox. Loud failures,
+1. **Hermetic with `--seal`** inside the sandbox. Loud failures,
    readable error messages, fast feedback.
-3. **A capability-passing protocol** at the interface — give the
+1. **A capability-passing protocol** at the interface — give the
    tool what it needs, not access to what it might need.
 
 If you have an "accidental side-effects" problem, hermetic alone is

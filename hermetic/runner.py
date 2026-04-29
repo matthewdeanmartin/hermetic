@@ -44,13 +44,13 @@ def run(target: str, target_argv: List[str], cfg: GuardConfig) -> int:
             import subprocess  # nosec
 
             try:
-                result = subprocess.run(  # nosec
+                completed = subprocess.run(  # nosec
                     [spec.exe_path] + target_argv[1:],
                     env=env,
                     check=False,
                 )
                 # Terminate immediately, propagating the target's exit code.
-                sys.exit(result.returncode)
+                sys.exit(completed.returncode)
             except FileNotFoundError:
                 print(f"hermetic: command not found: {spec.exe_path}", file=sys.stderr)
                 return 127  # Standard exit code for "command not found"
@@ -80,10 +80,10 @@ def run(target: str, target_argv: List[str], cfg: GuardConfig) -> int:
                 dict(fs_root=cfg.fs_root, trace=cfg.trace) if cfg.fs_readonly else None
             ),
             imports=(
-            dict(trace=cfg.trace, block_subprocess_libs=cfg.no_subprocess)
-            if cfg.block_native
-            else None
-        ),
+                dict(trace=cfg.trace, block_subprocess_libs=cfg.no_subprocess)
+                if cfg.block_native
+                else None
+            ),
         )
         result = invoke_inprocess(spec)
         return int(result) if isinstance(result, int) else 0

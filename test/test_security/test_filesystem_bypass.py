@@ -1,4 +1,5 @@
 """Phase 4 hardening tests: io.open, shutil mutators."""
+
 from __future__ import annotations
 
 import io

@@ -78,17 +78,17 @@ def install(*, fs_root: str | None = None, trace: bool = False) -> None:
         if hasattr(os, name):
             _originals[f"os.{name}"] = getattr(os, name)
 
-    def _trace(msg: str):
+    def _trace(msg: str) -> None:
         if trace:
             print(f"[hermetic] {msg}", flush=True)
 
     def _coerce_path(p: Any) -> str:
         try:
-            return os.fspath(p)
+            return str(os.fspath(p))
         except TypeError:
             return str(p)
 
-    def open_guard(file, mode="r", *a, **k):
+    def open_guard(file: Any, mode: str = "r", *a: Any, **k: Any) -> Any:
         path = _coerce_path(file)
         # mode may be int (numeric flags) when open_guard is reached via
         # os.open; the os_open_guard already translated to a string in that
@@ -100,34 +100,30 @@ def install(*, fs_root: str | None = None, trace: bool = False) -> None:
         if _root and not _is_within(path, _root):
             _trace(f"blocked open read-outside-root path={path}")
             raise PolicyViolation(f"read outside sandbox root: {path}")
-        return _originals["open"](file, mode, *a, **k)  # type: ignore[misc]
+        return _originals["open"](file, mode, *a, **k)
 
     WRITE_FLAGS = (
-        os.O_WRONLY
-        | os.O_RDWR
-        | os.O_APPEND
-        | os.O_CREAT
-        | getattr(os, "O_TRUNC", 0)
+        os.O_WRONLY | os.O_RDWR | os.O_APPEND | os.O_CREAT | getattr(os, "O_TRUNC", 0)
     )
 
-    def os_open_guard(path, flags, *a, **k):
+    def os_open_guard(path: Any, flags: int, *a: Any, **k: Any) -> Any:
         mode = "r" if not (flags & WRITE_FLAGS) else "w"
         return open_guard(path, mode, *a, **k)
 
-    builtins.open = open_guard  # type: ignore[assignment]
-    pathlib.Path.open = lambda self, *a, **k: open_guard(str(self), *a, **k)  # type: ignore[assignment]
-    os.open = os_open_guard  # type: ignore[assignment]
+    builtins.open = open_guard
+    pathlib.Path.open = lambda self, *a, **k: open_guard(str(self), *a, **k)  # type: ignore[method-assign]
+    os.open = os_open_guard
     # io.open is documented as identical to builtins.open. Patch it too so
     # libraries that did `from io import open` get our guarded version.
     try:
-        io.open = open_guard  # type: ignore[assignment]
+        io.open = open_guard
     except (AttributeError, TypeError):
         pass
     for native_mod in ("posix", "nt"):
         nm = sys.modules.get(native_mod)
         if nm is not None and hasattr(nm, "open"):
             try:
-                nm.open = os_open_guard  # type: ignore[assignment]
+                setattr(nm, "open", os_open_guard)
             except (AttributeError, TypeError):
                 pass
 
@@ -148,9 +144,9 @@ def install(*, fs_root: str | None = None, trace: bool = False) -> None:
     shutil_mod = sys.modules.get("shutil")
     if shutil_mod is None:
         try:
-            import shutil as shutil_mod  # type: ignore[no-redef]
+            import shutil as shutil_mod
         except Exception:
-            shutil_mod = None  # type: ignore[assignment]
+            shutil_mod = None
     if shutil_mod is not None:
         for name in (
             "rmtree",

@@ -5,7 +5,7 @@ import errno
 import socket
 import ssl
 from textwrap import dedent
-from typing import Any, Iterable, Never, Set
+from typing import Any, Iterable, Set
 
 from ..errors import PolicyViolation
 
@@ -100,8 +100,10 @@ def install(
             return True
         return False
 
-    class GuardedSocket(_originals["socket_cls"]):  # type: ignore[valid-type, misc]
-        def connect(self, address):  # type: ignore[override]
+    _socket_base: Any = _originals["socket_cls"]
+
+    class GuardedSocket(_socket_base):  # type: ignore[misc]
+        def connect(self, address: Any) -> Any:
             host = _host_from(address)
             if _is_allowed(host):
                 return super().connect(address)
@@ -111,59 +113,65 @@ def install(
         def connect_ex(self, address: Any) -> int:
             host = _host_from(address)
             if _is_allowed(host):
-                return super().connect_ex(address)
+                return int(super().connect_ex(address))
             _trace(f"blocked socket.connect_ex host={host} reason=no-network")
             return errno.EACCES
 
-        def sendto(self, bytes: Any, address: Any) -> Any:  # type: ignore[override]
+        def sendto(self, bytes: Any, address: Any) -> Any:
             host = _host_from(address)
             if _is_allowed(host):
                 return super().sendto(bytes, address)
             _trace(f"blocked socket.sendto host={host} reason=no-network")
             raise PolicyViolation(f"network disabled: sendto({host})")
 
-        def bind(self, address: Any) -> Any:  # type: ignore[override]
+        def bind(self, address: Any) -> Any:
             if _bind_allowed(address):
                 return super().bind(address)
             host = _host_from(address)
             _trace(f"blocked socket.bind host={host} reason=no-network")
             raise PolicyViolation(f"network disabled: bind({host})")
 
-        if hasattr(_originals["socket_cls"], "sendmsg"):
+        if hasattr(_socket_base, "sendmsg"):
 
-            def sendmsg(self, buffers: Any, ancdata=(), flags=0, address=None) -> Any:  # type: ignore[override]
+            def sendmsg(
+                self,
+                buffers: Any,
+                ancdata: Any = (),
+                flags: int = 0,
+                address: Any = None,
+            ) -> Any:
                 host = _host_from(address)
                 if _is_allowed(host):
                     return super().sendmsg(buffers, ancdata, flags, address)
                 _trace(f"blocked socket.sendmsg host={host} reason=no-network")
                 raise PolicyViolation(f"network disabled: sendmsg({host})")
 
-    def create_connection_guard(address: Any, *a: Any, **k: Any) -> Never:
+    def create_connection_guard(address: Any, *a: Any, **k: Any) -> Any:
         host = _host_from(address)
         if _is_allowed(host):
             return _originals["create_connection"](address, *a, **k)
         _trace(f"blocked socket.create_connection host={host} reason=no-network")
         raise PolicyViolation(f"network disabled: create_connection({host})")
 
-    def getaddrinfo_guard(host, *a, **k):
+    def getaddrinfo_guard(host: Any, *a: Any, **k: Any) -> Any:
         if _is_allowed(str(host)):
             return _originals["getaddrinfo"](host, *a, **k)
         _trace(f"blocked socket.getaddrinfo host={host} reason=no-network")
         raise PolicyViolation(f"network disabled: DNS({host})")
 
-    def gethostbyname_guard(host, *a, **k):
+    def gethostbyname_guard(host: Any, *a: Any, **k: Any) -> Any:
         if _is_allowed(str(host)):
             return _originals["gethostbyname"](host, *a, **k)
         _trace(f"blocked socket.gethostbyname host={host} reason=no-network")
         raise PolicyViolation(f"network disabled: DNS({host})")
 
-    def gethostbyname_ex_guard(host, *a, **k):
+    def gethostbyname_ex_guard(host: Any, *a: Any, **k: Any) -> Any:
         if _is_allowed(str(host)):
             return _originals["gethostbyname_ex"](host, *a, **k)
         _trace(f"blocked socket.gethostbyname_ex host={host} reason=no-network")
         raise PolicyViolation(f"network disabled: DNS({host})")
 
-    def wrap_socket_guard(self, sock, *a, **k):
+    def wrap_socket_guard(self: Any, sock: Any, *a: Any, **k: Any) -> Any:
         _trace("blocked ssl.SSLContext.wrap_socket reason=no-network")
         raise PolicyViolation("network disabled: TLS")
 
@@ -184,18 +192,18 @@ def install(
 
     socket.socket = GuardedSocket  # type: ignore[misc]
     if getattr(socket, "SocketType", None) is not None:
-        socket.SocketType = GuardedSocket  # type: ignore[assignment]
+        socket.SocketType = GuardedSocket
     socket.create_connection = create_connection_guard
     socket.getaddrinfo = getaddrinfo_guard
     socket.gethostbyname = gethostbyname_guard
     socket.gethostbyname_ex = gethostbyname_ex_guard
-    ssl.SSLContext.wrap_socket = wrap_socket_guard
+    ssl.SSLContext.wrap_socket = wrap_socket_guard  # type: ignore[method-assign]
     if "socketpair" in _originals:
-        socket.socketpair = socketpair_guard  # type: ignore[assignment]
+        socket.socketpair = socketpair_guard
     if "fromfd" in _originals:
-        socket.fromfd = fromfd_guard  # type: ignore[assignment]
+        socket.fromfd = fromfd_guard
     if "fromshare" in _originals:
-        socket.fromshare = fromshare_guard  # type: ignore[assignment]
+        socket.fromshare = fromshare_guard
     # NOTE on _socket: we deliberately do NOT replace _socket.socket.
     # socket.socket inherits from _socket.socket, so swapping the C base
     # class causes infinite recursion in socket.socket.__init__. The
@@ -213,18 +221,18 @@ def uninstall() -> None:
         return
     socket.socket = _originals["socket_cls"]  # type: ignore[misc]
     if _originals.get("SocketType") is not None:
-        socket.SocketType = _originals["SocketType"]  # type: ignore[assignment]
+        socket.SocketType = _originals["SocketType"]
     socket.create_connection = _originals["create_connection"]
     socket.getaddrinfo = _originals["getaddrinfo"]
     socket.gethostbyname = _originals["gethostbyname"]
     socket.gethostbyname_ex = _originals["gethostbyname_ex"]
-    ssl.SSLContext.wrap_socket = _originals["wrap_socket"]
+    ssl.SSLContext.wrap_socket = _originals["wrap_socket"]  # type: ignore[method-assign]
     if "socketpair" in _originals:
-        socket.socketpair = _originals["socketpair"]  # type: ignore[assignment]
+        socket.socketpair = _originals["socketpair"]
     if "fromfd" in _originals:
-        socket.fromfd = _originals["fromfd"]  # type: ignore[assignment]
+        socket.fromfd = _originals["fromfd"]
     if "fromshare" in _originals:
-        socket.fromshare = _originals["fromshare"]  # type: ignore[assignment]
+        socket.fromshare = _originals["fromshare"]
     _originals.clear()
     _installed = False
 

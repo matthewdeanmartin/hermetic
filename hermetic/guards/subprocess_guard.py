@@ -21,7 +21,15 @@ def install(*, trace: bool = False) -> None:
     _installed = True
 
     targets: dict[Any, tuple[str, ...]] = {
-        subprocess: ("Popen", "run", "call", "check_output", "check_call", "getoutput", "getstatusoutput"),
+        subprocess: (
+            "Popen",
+            "run",
+            "call",
+            "check_output",
+            "check_call",
+            "getoutput",
+            "getstatusoutput",
+        ),
         os: (
             "system",
             "execv",
@@ -102,7 +110,7 @@ def install(*, trace: bool = False) -> None:
 
     if _mp is not None:
         try:
-            _mp.Process.start = _raise  # type: ignore[assignment]
+            _mp.Process.start = _raise  # type: ignore[method-assign]
         except (AttributeError, TypeError):
             pass
 
@@ -117,7 +125,7 @@ def uninstall() -> None:
             mp = sys.modules.get("multiprocessing")
             if mp is not None:
                 try:
-                    mp.Process.start = original_func  # type: ignore[assignment]
+                    mp.Process.start = original_func
                 except (AttributeError, TypeError):
                     pass
             continue

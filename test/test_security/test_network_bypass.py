@@ -1,4 +1,5 @@
 """Phase 2 hardening tests: socketpair, fromfd, bind, IPv6 metadata."""
+
 from __future__ import annotations
 
 import socket
