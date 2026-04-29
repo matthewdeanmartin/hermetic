@@ -41,9 +41,13 @@ All arguments are keyword-only.
 | `block_subprocess` | `bool` | `False` | Same as `--no-subprocess`. |
 | `fs_readonly` | `bool` | `False` | Same as `--fs-readonly`. |
 | `fs_root` | `str \| None` | `None` | Same as `--fs-readonly=ROOT`; requires `fs_readonly=True`. |
+| `block_environment` | `bool` | `False` | Same as `--no-environment`. |
+| `block_code_exec` | `bool` | `False` | Same as `--no-code-exec`. |
+| `block_interpreter_mutation` | `bool` | `False` | Same as `--no-interpreter-mutation`. |
 | `block_native` | `bool` | `False` | Same as `--block-native`. |
 | `allow_localhost` | `bool` | `False` | Same as `--allow-localhost`. |
 | `allow_domains` | `Iterable[str]` | `()` | Same as repeated `--allow-domain`. |
+| `deny_imports` | `Iterable[str]` | `()` | Same as repeated `--deny-import`. |
 | `trace` | `bool` | `False` | Same as `--trace`. |
 | `sealed` | `bool` | `False` | Same as `--seal`. See [Sealed Mode](sealed-mode.md). |
 
@@ -171,6 +175,10 @@ from hermetic import with_hermetic
     block_subprocess=True,
     fs_readonly=True,
     fs_root="/tmp/agent-workspace",
+    block_environment=True,
+    block_code_exec=True,
+    block_interpreter_mutation=True,
+    deny_imports=["pickle", "marshal"],
     block_native=True,
     trace=True,
 )

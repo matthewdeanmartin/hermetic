@@ -29,6 +29,10 @@ nav:
       - Network Guard: guards/network.md
       - Subprocess Guard: guards/subprocess.md
       - Filesystem Guard: guards/filesystem.md
+      - Environment Guard: guards/environment.md
+      - Dynamic Code Guard: guards/dynamic-code.md
+      - Import Policy Guard: guards/import-policy.md
+      - Interpreter Mutation Guard: guards/interpreter.md
       - Native Imports Guard: guards/native-imports.md
   - Advanced:
       - Threat Model: threat-model.md

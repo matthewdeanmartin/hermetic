@@ -27,9 +27,13 @@ class BlockConfig:
     block_subprocess: bool = False
     fs_readonly: bool = False
     fs_root: Optional[str] = None
+    block_environment: bool = False
+    block_code_exec: bool = False
+    block_interpreter_mutation: bool = False
     block_native: bool = False
     allow_localhost: bool = False
     allow_domains: List[str] = field(default_factory=list)
+    deny_imports: List[str] = field(default_factory=list)
     trace: bool = False
     sealed: bool = False
 
@@ -43,9 +47,17 @@ class BlockConfig:
             "no_subprocess": "block_subprocess",
             "fs_readonly": "fs_readonly",
             "fs_root": "fs_root",
+            "block_environment": "block_environment",
+            "no_environment": "block_environment",
+            "no_env": "block_environment",
+            "block_code_exec": "block_code_exec",
+            "no_code_exec": "block_code_exec",
+            "block_interpreter_mutation": "block_interpreter_mutation",
+            "no_interpreter_mutation": "block_interpreter_mutation",
             "block_native": "block_native",
             "allow_localhost": "allow_localhost",
             "allow_domains": "allow_domains",
+            "deny_imports": "deny_imports",
             "trace": "trace",
             "sealed": "sealed",
         }
@@ -62,9 +74,15 @@ class BlockConfig:
             block_subprocess=self.block_subprocess or other.block_subprocess,
             fs_readonly=self.fs_readonly or other.fs_readonly,
             fs_root=other.fs_root or self.fs_root,
+            block_environment=self.block_environment or other.block_environment,
+            block_code_exec=self.block_code_exec or other.block_code_exec,
+            block_interpreter_mutation=(
+                self.block_interpreter_mutation or other.block_interpreter_mutation
+            ),
             block_native=self.block_native or other.block_native,
             allow_localhost=self.allow_localhost or other.allow_localhost,
             allow_domains=list(dict.fromkeys(self.allow_domains + other.allow_domains)),
+            deny_imports=list(dict.fromkeys(self.deny_imports + other.deny_imports)),
             trace=self.trace or other.trace,
             sealed=self.sealed or other.sealed,
         )
@@ -90,12 +108,17 @@ def _install_for_config(cfg: BlockConfig) -> None:
         ),
         subproc=({"trace": cfg.trace} if cfg.block_subprocess else None),
         fs=({"fs_root": cfg.fs_root, "trace": cfg.trace} if cfg.fs_readonly else None),
+        env=({"trace": cfg.trace} if cfg.block_environment else None),
+        code=({"trace": cfg.trace} if cfg.block_code_exec else None),
+        interp=({"trace": cfg.trace} if cfg.block_interpreter_mutation else None),
         imports=(
             {
+                "block_native": cfg.block_native,
                 "trace": cfg.trace,
                 "block_subprocess_libs": cfg.block_subprocess,
+                "deny_imports": cfg.deny_imports,
             }
-            if cfg.block_native
+            if cfg.block_native or cfg.deny_imports
             else None
         ),
     )
@@ -170,9 +193,13 @@ def hermetic_blocker(
     block_subprocess: bool = False,
     fs_readonly: bool = False,
     fs_root: Optional[str] = None,
+    block_environment: bool = False,
+    block_code_exec: bool = False,
+    block_interpreter_mutation: bool = False,
     block_native: bool = False,
     allow_localhost: bool = False,
     allow_domains: Iterable[str] = (),
+    deny_imports: Iterable[str] = (),
     trace: bool = False,
     sealed: bool = False,
 ) -> _HermeticBlocker:
@@ -193,9 +220,13 @@ def hermetic_blocker(
         block_subprocess=block_subprocess,
         fs_readonly=fs_readonly,
         fs_root=fs_root,
+        block_environment=block_environment,
+        block_code_exec=block_code_exec,
+        block_interpreter_mutation=block_interpreter_mutation,
         block_native=block_native,
         allow_localhost=allow_localhost,
         allow_domains=list(allow_domains or ()),
+        deny_imports=list(deny_imports or ()),
         trace=trace,
         sealed=sealed,
     )

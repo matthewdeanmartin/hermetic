@@ -40,6 +40,7 @@ dev = [
     "cffi",
     "httpie",
     "pylint",
+    "bandit",
 
     "git2md; python_version >= '3.10'",
     "pyclean; python_version >= '3.12'",

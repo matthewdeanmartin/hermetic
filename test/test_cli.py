@@ -23,6 +23,7 @@ def test_parse_hermetic_args():
         block_native=False,
         allow_localhost=False,
         allow_domains=["example.com"],
+        deny_imports=[],
         trace=True,
     )
 
@@ -33,6 +34,21 @@ def test_parse_hermetic_args_with_profile():
     assert cfg.no_network is True
     assert cfg.allow_localhost is True
     assert cfg.no_subprocess is True
+
+
+def test_parse_hermetic_args_new_guards():
+    argv = [
+        "--no-env",
+        "--no-code-exec",
+        "--no-interpreter-mutation",
+        "--deny-import=pickle",
+        "--deny-import=xml.etree",
+    ]
+    cfg = parse_hermetic_args(argv)
+    assert cfg.no_environment is True
+    assert cfg.no_code_exec is True
+    assert cfg.no_interpreter_mutation is True
+    assert cfg.deny_imports == ["pickle", "xml.etree"]
 
 
 # def test_main_help(capsys):

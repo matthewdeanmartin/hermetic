@@ -67,13 +67,38 @@ See [Subprocess Guard](guards/subprocess.md) for the full surface.
 
 See [Filesystem Guard](guards/filesystem.md) for the full surface.
 
-### Native code
+### Environment
 
 | Flag | Effect |
 |---|---|
+| `--no-environment`, `--no-env` | Block `os.getenv`, `os.environ[...]`, `os.putenv`, `os.unsetenv`, and mapping-style environment access. |
+
+See [Environment Guard](guards/environment.md) for the full surface.
+
+### Dynamic code execution
+
+| Flag | Effect |
+|---|---|
+| `--no-code-exec` | Block `eval`, `exec`, direct `compile(...)` calls, and `runpy.run_module` / `runpy.run_path`. Imports still work. |
+
+See [Dynamic Code Guard](guards/dynamic-code.md) for the full surface.
+
+### Import policy
+
+| Flag | Effect |
+|---|---|
+| `--deny-import NAME` | Deny importing `NAME` and its submodules. Repeatable. |
 | `--block-native` | Refuse to load native extension modules (`.so`/`.pyd`). Refuse to import `ctypes`, `_ctypes`, `cffi`, `_cffi_backend`. Patch `ctypes.CDLL`, `ctypes.PyDLL`, `cffi.FFI`, etc. on already-loaded copies. When combined with `--no-subprocess`, also block `sh`, `pexpect`, `plumbum`, `sarge`, `delegator`. |
 
-See [Native Imports Guard](guards/native-imports.md) for the full surface.
+See [Import Policy Guard](guards/import-policy.md) and [Native Imports Guard](guards/native-imports.md) for the full surface.
+
+### Interpreter mutation
+
+| Flag | Effect |
+|---|---|
+| `--no-interpreter-mutation` | Block `os.chdir`, `os.fchdir`, `site.addsitedir`, and mutation of `sys.path`, `sys.meta_path`, `sys.path_hooks`, and `sys.path_importer_cache`. |
+
+See [Interpreter Mutation Guard](guards/interpreter.md) for the full surface.
 
 ### Profiles
 
@@ -82,7 +107,8 @@ See [Native Imports Guard](guards/native-imports.md) for the full surface.
 | `--profile NAME` | Apply a named bundle of flags. Repeatable. Profiles compose by union. |
 
 Built-in profiles: `block-all`, `net-hermetic`, `exec-deny`,
-`fs-readonly`, `block-native`. See [Profiles](profiles.md).
+`fs-readonly`, `block-native`. `block-all` now also enables the
+environment, dynamic-code, and interpreter-mutation guards. See [Profiles](profiles.md).
 
 ### Other
 

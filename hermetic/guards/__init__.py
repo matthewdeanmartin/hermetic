@@ -2,11 +2,19 @@
 # This file makes the 'guards' directory a package.
 from typing import Any
 
-from . import subprocess_guard  # nosec
+from . import code_exec, environment, interpreter, subprocess_guard  # nosec
 from . import filesystem, imports_guard, network
 
 # This makes install_all and uninstall_all easily accessible.
-_all_guards = (filesystem, imports_guard, network, subprocess_guard)
+_all_guards = (
+    code_exec,
+    environment,
+    filesystem,
+    imports_guard,
+    interpreter,
+    network,
+    subprocess_guard,
+)
 
 
 def install_all(**kwargs: Any) -> None:
@@ -16,6 +24,12 @@ def install_all(**kwargs: Any) -> None:
         subprocess_guard.install(**kwargs["subproc"])
     if kwargs.get("fs"):
         filesystem.install(**kwargs["fs"])
+    if kwargs.get("env"):
+        environment.install(**kwargs["env"])
+    if kwargs.get("code"):
+        code_exec.install(**kwargs["code"])
+    if kwargs.get("interp"):
+        interpreter.install(**kwargs["interp"])
     if kwargs.get("imports"):
         imports_guard.install(**kwargs["imports"])
 

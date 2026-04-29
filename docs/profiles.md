@@ -20,7 +20,7 @@ Lock down everything.
 
 | Equivalent flags |
 |---|
-| `--no-network --no-subprocess --fs-readonly --block-native` |
+| `--no-network --no-subprocess --fs-readonly --no-environment --no-code-exec --no-interpreter-mutation --block-native` |
 
 Use when you want a target to fail fast at the first sign of any
 side-effect.
@@ -105,6 +105,9 @@ DEFAULT_POLICY = dict(
     block_subprocess=True,
     fs_readonly=True,
     fs_root="./workspace",
+    block_environment=True,
+    block_code_exec=True,
+    block_interpreter_mutation=True,
 )
 
 with hermetic_blocker(**DEFAULT_POLICY):

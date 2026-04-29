@@ -11,16 +11,26 @@ class GuardConfig:
     no_subprocess: bool = False
     fs_readonly: bool = False
     fs_root: str | None = None
+    no_environment: bool = False
+    no_code_exec: bool = False
+    no_interpreter_mutation: bool = False
     block_native: bool = False
     allow_localhost: bool = False
     allow_domains: List[str] = field(default_factory=list)
+    deny_imports: List[str] = field(default_factory=list)
     trace: bool = False
     sealed: bool = False
 
 
 PROFILES: dict[str, GuardConfig] = {
     "block-all": GuardConfig(
-        block_native=True, no_subprocess=True, no_network=True, fs_readonly=True
+        block_native=True,
+        no_subprocess=True,
+        no_network=True,
+        fs_readonly=True,
+        no_environment=True,
+        no_code_exec=True,
+        no_interpreter_mutation=True,
     ),
     "net-hermetic": GuardConfig(no_network=True, allow_localhost=True),
     "exec-deny": GuardConfig(no_subprocess=True),

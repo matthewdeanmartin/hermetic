@@ -51,9 +51,32 @@ def build_parser() -> argparse.ArgumentParser:
         help="Make filesystem readonly; optional =ROOT constrains reads.",
     )
     p.add_argument(
+        "--no-environment",
+        "--no-env",
+        dest="no_environment",
+        action="store_true",
+        help="Disable environment variable reads and mutations.",
+    )
+    p.add_argument(
+        "--no-code-exec",
+        action="store_true",
+        help="Disable eval/exec/compile and runpy execution helpers.",
+    )
+    p.add_argument(
+        "--no-interpreter-mutation",
+        action="store_true",
+        help="Disable sys.path/cwd/site mutation surfaces.",
+    )
+    p.add_argument(
         "--block-native",
         action="store_true",
         help="Deny native extensions and FFI modules.",
+    )
+    p.add_argument(
+        "--deny-import",
+        action="append",
+        default=[],
+        help="Deny importing a module or package prefix (repeatable).",
     )
     p.add_argument(
         "--profile",
@@ -90,9 +113,13 @@ def parse_hermetic_args(argv: List[str]) -> GuardConfig:
         fs_root=(
             None if ns.fs_readonly in (None, "__ENABLED__") else str(ns.fs_readonly)
         ),
+        no_environment=bool(ns.no_environment),
+        no_code_exec=bool(ns.no_code_exec),
+        no_interpreter_mutation=bool(ns.no_interpreter_mutation),
         block_native=bool(ns.block_native),
         allow_localhost=bool(ns.allow_localhost),
         allow_domains=list(ns.allow_domain or []),
+        deny_imports=list(ns.deny_import or []),
         trace=bool(ns.trace),
         sealed=bool(getattr(ns, "seal", False)),
     )

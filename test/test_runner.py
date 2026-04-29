@@ -12,9 +12,13 @@ def test_config_to_flags(default_guard_config):
         "no_subprocess": False,
         "fs_readonly": False,
         "fs_root": None,
+        "no_environment": False,
+        "no_code_exec": False,
+        "no_interpreter_mutation": False,
         "block_native": False,
         "allow_localhost": False,
         "allow_domains": ["example.com"],
+        "deny_imports": [],
         "trace": True,
     }
 

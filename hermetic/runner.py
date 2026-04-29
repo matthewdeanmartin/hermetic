@@ -18,9 +18,13 @@ def config_to_flags(cfg: GuardConfig) -> Dict[str, Any]:
         "no_subprocess": cfg.no_subprocess,
         "fs_readonly": cfg.fs_readonly,
         "fs_root": cfg.fs_root,
+        "no_environment": cfg.no_environment,
+        "no_code_exec": cfg.no_code_exec,
+        "no_interpreter_mutation": cfg.no_interpreter_mutation,
         "block_native": cfg.block_native,
         "allow_localhost": cfg.allow_localhost,
         "allow_domains": cfg.allow_domains,
+        "deny_imports": cfg.deny_imports,
         "trace": cfg.trace,
     }
 
@@ -81,9 +85,17 @@ def run(target: str, target_argv: List[str], cfg: GuardConfig) -> int:
                 if cfg.fs_readonly
                 else None
             ),
+            env=({"trace": cfg.trace} if cfg.no_environment else None),
+            code=({"trace": cfg.trace} if cfg.no_code_exec else None),
+            interp=({"trace": cfg.trace} if cfg.no_interpreter_mutation else None),
             imports=(
-                {"trace": cfg.trace, "block_subprocess_libs": cfg.no_subprocess}
-                if cfg.block_native
+                {
+                    "block_native": cfg.block_native,
+                    "trace": cfg.trace,
+                    "block_subprocess_libs": cfg.no_subprocess,
+                    "deny_imports": cfg.deny_imports,
+                }
+                if cfg.block_native or cfg.deny_imports
                 else None
             ),
         )

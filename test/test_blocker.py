@@ -15,6 +15,17 @@ def test_block_config_from_kwargs(default_block_config):
     assert cfg.block_network is True
     assert cfg.block_subprocess is True
 
+    cfg = BlockConfig.from_kwargs(
+        no_env=True,
+        no_code_exec=True,
+        no_interpreter_mutation=True,
+        deny_imports=["pickle"],
+    )
+    assert cfg.block_environment is True
+    assert cfg.block_code_exec is True
+    assert cfg.block_interpreter_mutation is True
+    assert cfg.deny_imports == ["pickle"]
+
     with pytest.raises(TypeError, match="Unknown argument: invalid"):
         BlockConfig.from_kwargs(invalid=True)
 

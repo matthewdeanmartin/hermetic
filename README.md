@@ -23,6 +23,10 @@ Use the `hermetic` command to run any Python console script, separating its argu
 - `--allow-domain <domain>`: Allows connections to a specific domain (repeatable).
 - `--no-subprocess`: Disable creating new processes.
 - `--fs-readonly[=/path/to/root]`: Make the filesystem read-only. Optionally, restrict all reads to be within the specified root directory.
+- `--no-environment`: Disable environment variable reads and mutations.
+- `--no-code-exec`: Disable `eval`, `exec`, `compile`, and `runpy` execution helpers.
+- `--deny-import <module>`: Deny importing a module or package prefix (repeatable).
+- `--no-interpreter-mutation`: Disable `sys.path`, `cwd`, and `site` mutation surfaces.
 - `--block-native`: Block imports of native C extensions.
 - `--profile <name>`: Apply a pre-configured profile (e.g., `block-all`).
 - `--trace`: Print a message to stderr when an action is blocked.

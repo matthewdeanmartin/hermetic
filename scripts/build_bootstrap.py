@@ -18,8 +18,15 @@ import sys
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
-from hermetic.guards import (filesystem, imports_guard, network,  # noqa
-                             subprocess_guard)
+from hermetic.guards import (  # noqa
+    code_exec,
+    environment,
+    filesystem,
+    imports_guard,
+    interpreter,
+    network,
+    subprocess_guard,
+)
 
 # Template for the final bootstrap.py file
 # The {guards_code} placeholder will be filled with the concatenated
@@ -94,9 +101,12 @@ def main():
 
     # Order matters for clarity in the generated file
     guard_modules = [
+        environment,
+        code_exec,
         network,
         subprocess_guard,
         filesystem,
+        interpreter,
         imports_guard,
     ]
 

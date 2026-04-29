@@ -27,9 +27,19 @@ def reset_blocker_state(monkeypatch):
         "timeline": [],  # order assertions: "install", "func", "uninstall"
     }
 
-    def _stub_install_all(*, net=None, subproc=None, fs=None, imports=None):
+    def _stub_install_all(
+        *, net=None, subproc=None, fs=None, env=None, code=None, interp=None, imports=None
+    ):
         calls["install_all"].append(
-            dict(net=net, subproc=subproc, fs=fs, imports=imports)
+            dict(
+                net=net,
+                subproc=subproc,
+                fs=fs,
+                env=env,
+                code=code,
+                interp=interp,
+                imports=imports,
+            )
         )
         calls["timeline"].append("install")
 
@@ -130,7 +140,7 @@ def test_hermetic_blocker_calls_install_even_if_all_sections_disabled(
         pass
     assert len(R.calls["install_all"]) == 1  # still called with all None sections
     assert R.calls["install_all"][0] == dict(
-        net=None, subproc=None, fs=None, imports=None
+        net=None, subproc=None, fs=None, env=None, code=None, interp=None, imports=None
     )
     assert len(R.calls["uninstall_all"]) == 2
 
