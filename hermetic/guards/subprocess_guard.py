@@ -6,7 +6,12 @@ import os
 import subprocess  # nosec
 import sys
 from textwrap import dedent
-from typing import Any, Never
+from typing import Any
+
+try:
+    from typing import Never  # Python 3.11+
+except ImportError:
+    from typing_extensions import Never  # Python 3.9/3.10
 
 from ..errors import PolicyViolation
 

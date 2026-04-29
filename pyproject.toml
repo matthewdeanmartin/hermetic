@@ -4,10 +4,21 @@ version = "0.2.0"
 description = "User-space sandbox runner for Python console scripts"
 authors = [{ name = "Matthew Dean Martin" }]
 requires-python = ">=3.9"
-dependencies = []
+dependencies = [
+    "typing_extensions; python_version < '3.11'"
+]
 readme = "README.md"
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 
 [project.urls]
@@ -27,11 +38,7 @@ dev = [
     "troml-dev-status",
     "jiggle_version",
     "cffi",
-    "pytest-asyncio",
     "httpie",
-    "pytest>=6.0.1",
-    "pytest-cov>=2.10.1",
-    "pytest-timeout>=2.4.0",
     "pylint",
 
     "git2md; python_version >= '3.10'",
@@ -62,7 +69,10 @@ dev = [
     "pylint; python_version >= '3.8'",
 
     # testing tools
-    "pytest; python_version >= '3.8'",
+    "pytest-asyncio",
+    "pytest>=6.0.1",
+    "pytest-cov>=2.10.1",
+    "pytest-timeout>=2.4.0",
     "pytest-cov; python_version >= '3.8'",
     "pytest-xdist>=3.5.0; python_version >= '3.8'",
     "pytest-randomly>=3.15.0; python_version >= '3.8'",
