@@ -203,7 +203,7 @@ def install(
         socket.socketpair = socketpair_guard
     if "fromfd" in _originals:
         socket.fromfd = fromfd_guard
-    if "fromshare" in _originals:
+    if "fromshare" in _originals  and hasattr(socket, "fromshare"):
         socket.fromshare = fromshare_guard
     # NOTE on _socket: we deliberately do NOT replace _socket.socket.
     # socket.socket inherits from _socket.socket, so swapping the C base
@@ -227,12 +227,12 @@ def uninstall() -> None:
     socket.getaddrinfo = _originals["getaddrinfo"]
     socket.gethostbyname = _originals["gethostbyname"]
     socket.gethostbyname_ex = _originals["gethostbyname_ex"]
-    ssl.SSLContext.wrap_socket = _originals["wrap_socket"]  # type: ignore[method-assign]
+    ssl.SSLContext.wrap_socket = _originals["wrap_socket"]  # type: ignore
     if "socketpair" in _originals:
         socket.socketpair = _originals["socketpair"]
     if "fromfd" in _originals:
         socket.fromfd = _originals["fromfd"]
-    if "fromshare" in _originals:
+    if "fromshare" in _originals and hasattr(socket, "fromshare"):
         socket.fromshare = _originals["fromshare"]
     _originals.clear()
     _installed = False
