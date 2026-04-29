@@ -44,7 +44,7 @@ Hermetic detects writes by inspecting the mode string for any of
 If `mode` is omitted, `"r"` is assumed (matching `open`'s default).
 
 For `os.open`, hermetic translates the integer flags to a mode by
-checking the write-flag bitmask, then re-uses the same string-based
+checking the write-flag bitmask, then reuses the same string-based
 check.
 
 ## Sandbox root

@@ -2,7 +2,7 @@
 
 Run a python tool, or your application with certain APIs disabled, such as network or subprocess.
 
-The previously safe library you depend on was highjacked and will be sending your password files to a remote server.
+The previously safe library you depend on was hijacked and will be sending your password files to a remote server.
 Or you installed this and the malicious hackers didn't include evasive code to defeat this fig leaf of a security
 feature and the day is saved.
 
