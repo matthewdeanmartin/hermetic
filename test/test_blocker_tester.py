@@ -26,7 +26,14 @@ def reset_blocker_state(monkeypatch):
     }
 
     def _stub_install_all(
-        *, net=None, subproc=None, fs=None, env=None, code=None, interp=None, imports=None
+        *,
+        net=None,
+        subproc=None,
+        fs=None,
+        env=None,
+        code=None,
+        interp=None,
+        imports=None,
     ):
         calls["install_all"].append(
             dict(

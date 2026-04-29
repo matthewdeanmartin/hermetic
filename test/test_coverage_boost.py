@@ -379,7 +379,9 @@ def test_run_bootstrap_forwards_sealed_flag(mocker):
             interp_path="interp",
         ),
     )
-    write_site = mocker.patch("hermetic.runner.write_sitecustomize", return_value="/tmp/site")
+    write_site = mocker.patch(
+        "hermetic.runner.write_sitecustomize", return_value="/tmp/site"
+    )
     mocker.patch("os.execve")
     mocker.patch("hermetic.runner.invoke_inprocess", return_value=0)
 

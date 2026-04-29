@@ -204,7 +204,7 @@ def install(
         socket.socketpair = socketpair_guard
     if "fromfd" in _originals:
         socket.fromfd = fromfd_guard
-    if "fromshare" in _originals  and hasattr(socket, "fromshare"):
+    if "fromshare" in _originals and hasattr(socket, "fromshare"):
         socket.fromshare = fromshare_guard
     # NOTE on _socket: we deliberately do NOT replace _socket.socket.
     # socket.socket inherits from _socket.socket, so swapping the C base

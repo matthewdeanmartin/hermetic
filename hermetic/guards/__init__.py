@@ -2,8 +2,15 @@
 # This file makes the 'guards' directory a package.
 from typing import Any
 
-from . import code_exec, environment, interpreter, subprocess_guard  # nosec
-from . import filesystem, imports_guard, network
+from . import (
+    code_exec,
+    environment,
+    filesystem,
+    imports_guard,  # nosec
+    interpreter,
+    network,
+    subprocess_guard,
+)
 
 # This makes install_all and uninstall_all easily accessible.
 _all_guards = (

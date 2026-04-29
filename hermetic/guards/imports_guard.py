@@ -88,9 +88,7 @@ def _normalize_deny_names(names: Iterable[str]) -> set[str]:
 def _matches_denied_import(name: str, denied_name: str) -> bool:
     root = name.split(".", 1)[0]
     return (
-        name == denied_name
-        or name.startswith(f"{denied_name}.")
-        or root == denied_name
+        name == denied_name or name.startswith(f"{denied_name}.") or root == denied_name
     )
 
 
