@@ -18,15 +18,15 @@ Then the C-level primitives (best-effort, POSIX-only where applicable):
 
 | Module | Functions patched |
 |---|---|
-| `_posixsubprocess` | `fork_exec` (the underlying primitive `subprocess.Popen` calls) |
+| `_posixsubprocess` | `fork_exec` (the underlying primitive `subprocess.Popen` calls on POSIX) |
 | `posix` | `fork`, `forkpty`, `system`, `posix_spawn`, `posix_spawnp` |
 | `pty` | `fork`, `spawn`, `openpty` |
+| `_winapi` | `CreateProcess` (the underlying primitive `subprocess.Popen` calls on Windows) |
 
 Anyone who reimplements `subprocess.Popen` from scratch reaches
-`_posixsubprocess.fork_exec` — patching it closes that bypass on
-POSIX. On Windows, the equivalent is `subprocess._winapi.CreateProcess`,
-which is not currently patched (the high-level surface is enough in
-practice, but it is a known gap).
+`_posixsubprocess.fork_exec` on POSIX or `_winapi.CreateProcess`
+on Windows — patching both closes the obvious bypass on either
+platform.
 
 ## Subprocess-replacement libraries
 

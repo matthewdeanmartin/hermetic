@@ -49,12 +49,15 @@ def install(*, trace: bool = False) -> None:
         asyncio: ("create_subprocess_exec", "create_subprocess_shell"),
     }
 
-    # Best-effort: also patch the C-level primitive on POSIX. Without this,
-    # any caller that re-implements Popen reaches fork_exec directly.
+    # Best-effort: also patch the C-level primitives. Without these,
+    # any caller that re-implements Popen reaches them directly.
+    # _posixsubprocess.fork_exec is the underlying primitive on POSIX;
+    # _winapi.CreateProcess is the equivalent on Windows.
     extra_modules: list[tuple[str, tuple[str, ...]]] = [
         ("_posixsubprocess", ("fork_exec",)),
         ("posix", ("fork", "forkpty", "system", "posix_spawn", "posix_spawnp")),
         ("pty", ("fork", "spawn", "openpty")),
+        ("_winapi", ("CreateProcess",)),
     ]
     for mod_name, fns in extra_modules:
         mod = sys.modules.get(mod_name)
@@ -140,13 +143,17 @@ if cfg.get("no_subprocess"):
         "subprocess": ("Popen", "run", "call", "check_output"),
         "os": ("system", "execv", "execve", "execl", "execle", "execlp", "execlpe", "execvp", "execvpe", "fork", "forkpty", "spawnl", "spawnle", "spawnlp", "spawnlpe", "spawnv", "spawnve", "spawnvp", "spawnvpe"),
         "asyncio": ("create_subprocess_exec", "create_subprocess_shell"),
+        # C-level primitives — POSIX and Windows.
+        "_posixsubprocess": ("fork_exec",),
+        "_winapi": ("CreateProcess",),
     }
     for mod_name, funcs in targets.items():
         try:
             mod = __import__(mod_name)
             for name in funcs:
                 if hasattr(mod, name):
-                    setattr(mod, name, _deny_exec)
+                    try: setattr(mod, name, _deny_exec)
+                    except (AttributeError, TypeError): pass
         except ImportError:
             pass
 """

@@ -112,11 +112,12 @@ mitigated to some degree but not eliminated.
 
 - **Captured `subprocess.Popen` references** — same class as the
   socket case.
-- **Windows `CreateProcess` at the C level** — high-level
-  `subprocess`, `os.system`, and `os.spawn*` are patched, but a
-  custom C extension that calls `CreateProcessW` directly bypasses.
-  `--block-native` mitigates by preventing such an extension from
-  loading.
+- **C extensions that call `CreateProcessW` / `fork(2)` directly**
+  — the Python-visible primitives `_winapi.CreateProcess` (Windows)
+  and `_posixsubprocess.fork_exec` (POSIX) are patched, but a
+  third-party native extension that links the syscall directly
+  bypasses Python entirely. `--block-native` mitigates by
+  preventing such an extension from loading.
 - **`pty.fork`** — patched. `os.fork` — patched. `os.forkpty` —
   patched. `posix.fork` (the C-level alias) — not patched
   separately; `os.fork` patching covers most callers.

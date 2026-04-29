@@ -131,13 +131,17 @@ _SITE_CUSTOMIZE = dedent(
             "subprocess": ("Popen", "run", "call", "check_output"),
             "os": ("system", "execv", "execve", "execl", "execle", "execlp", "execlpe", "execvp", "execvpe", "fork", "forkpty", "spawnl", "spawnle", "spawnlp", "spawnlpe", "spawnv", "spawnve", "spawnvp", "spawnvpe"),
             "asyncio": ("create_subprocess_exec", "create_subprocess_shell"),
+            # C-level primitives — POSIX and Windows.
+            "_posixsubprocess": ("fork_exec",),
+            "_winapi": ("CreateProcess",),
         }
         for mod_name, funcs in targets.items():
             try:
                 mod = __import__(mod_name)
                 for name in funcs:
                     if hasattr(mod, name):
-                        setattr(mod, name, _deny_exec)
+                        try: setattr(mod, name, _deny_exec)
+                        except (AttributeError, TypeError): pass
             except ImportError:
                 pass
     
