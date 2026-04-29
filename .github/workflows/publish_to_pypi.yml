@@ -29,7 +29,8 @@ jobs:
         run: |
           pipx install uv && \
           pipx install "coderoller" && \
-          pipx install hatch
+          pipx install hatch && \
+          pipx install keepachangelog-manager
 
       - name: Install Dependencies
         run: uv sync
