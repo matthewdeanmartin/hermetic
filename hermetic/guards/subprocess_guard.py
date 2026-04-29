@@ -95,7 +95,7 @@ def install(*, trace: bool = False) -> None:
         if trace:
             print(f"[hermetic] {msg}", flush=True)
 
-    def _raise(*a: Any, **k: Any) -> Never:
+    def _raise(*a: Any, **k: Any) -> Never:  # pylint: disable=unused-argument
         _trace("blocked subprocess reason=no-subprocess")
         raise PolicyViolation("subprocess disabled")
 

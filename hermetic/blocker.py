@@ -80,21 +80,21 @@ def _effective_config() -> BlockConfig:
 def _install_for_config(cfg: BlockConfig) -> None:
     install_all(
         net=(
-            dict(
-                allow_localhost=cfg.allow_localhost,
-                allow_domains=cfg.allow_domains,
-                trace=cfg.trace,
-            )
+            {
+                "allow_localhost": cfg.allow_localhost,
+                "allow_domains": cfg.allow_domains,
+                "trace": cfg.trace,
+            }
             if cfg.block_network
             else None
         ),
-        subproc=(dict(trace=cfg.trace) if cfg.block_subprocess else None),
-        fs=(dict(fs_root=cfg.fs_root, trace=cfg.trace) if cfg.fs_readonly else None),
+        subproc=({"trace": cfg.trace} if cfg.block_subprocess else None),
+        fs=({"fs_root": cfg.fs_root, "trace": cfg.trace} if cfg.fs_readonly else None),
         imports=(
-            dict(
-                trace=cfg.trace,
-                block_subprocess_libs=cfg.block_subprocess,
-            )
+            {
+                "trace": cfg.trace,
+                "block_subprocess_libs": cfg.block_subprocess,
+            }
             if cfg.block_native
             else None
         ),
@@ -112,7 +112,9 @@ def _reapply_guards_locked() -> None:
         _install_for_config(_effective_config())
 
 
-class _HermeticBlocker(ContextDecorator, AbstractAsyncContextManager["_HermeticBlocker"]):
+class _HermeticBlocker(
+    ContextDecorator, AbstractAsyncContextManager["_HermeticBlocker"]
+):
     """
     Context manager / decorator to install hermetic guards for the current process.
 
@@ -152,7 +154,6 @@ class _HermeticBlocker(ContextDecorator, AbstractAsyncContextManager["_HermeticB
                     pass
                 _reapply_guards_locked()
         # don’t suppress exceptions
-        return None
 
     # ---- async protocol ----
     async def __aenter__(self) -> "_HermeticBlocker":

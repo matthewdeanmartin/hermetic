@@ -77,7 +77,7 @@ def _invalidate_finder_caches() -> None:
     is used for any subsequent native-extension import."""
     try:
         importlib.invalidate_caches()
-    except Exception:
+    except Exception:  # nosec: B110:try_except_pass
         pass
 
 
@@ -111,8 +111,8 @@ def install(*, trace: bool = False, block_subprocess_libs: bool = False) -> None
 
     def guarded_import(
         name: str,
-        globals: Any = None,
-        locals: Any = None,
+        globals: Any = None,  # pylint: disable=redefined-builtin
+        locals: Any = None,  # pylint: disable=redefined-builtin
         fromlist: Any = (),
         level: int = 0,
     ) -> Any:

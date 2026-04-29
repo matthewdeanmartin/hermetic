@@ -88,7 +88,9 @@ def install(*, fs_root: str | None = None, trace: bool = False) -> None:
         except TypeError:
             return str(p)
 
-    def open_guard(file: Any, mode: str = "r", *a: Any, **k: Any) -> Any:
+    def open_guard(  # pylint: disable=keyword-arg-before-vararg
+        file: Any, mode: str = "r", *a: Any, **k: Any
+    ) -> Any:
         path = _coerce_path(file)
         # mode may be int (numeric flags) when open_guard is reached via
         # os.open; the os_open_guard already translated to a string in that
@@ -127,7 +129,7 @@ def install(*, fs_root: str | None = None, trace: bool = False) -> None:
             except (AttributeError, TypeError):
                 pass
 
-    def _deny(*a: Any, **k: Any) -> None:
+    def _deny(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
         _trace("blocked fs mutation")
         raise PolicyViolation("filesystem mutation disabled")
 

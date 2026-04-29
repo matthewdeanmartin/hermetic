@@ -67,20 +67,22 @@ def run(target: str, target_argv: List[str], cfg: GuardConfig) -> int:
         sys.argv = target_argv
         install_all(
             net=(
-                dict(
-                    allow_localhost=cfg.allow_localhost,
-                    allow_domains=cfg.allow_domains,
-                    trace=cfg.trace,
-                )
+                {
+                    "allow_localhost": cfg.allow_localhost,
+                    "allow_domains": cfg.allow_domains,
+                    "trace": cfg.trace,
+                }
                 if cfg.no_network
                 else None
             ),
-            subproc=(dict(trace=cfg.trace) if cfg.no_subprocess else None),
+            subproc=({"trace": cfg.trace} if cfg.no_subprocess else None),
             fs=(
-                dict(fs_root=cfg.fs_root, trace=cfg.trace) if cfg.fs_readonly else None
+                {"fs_root": cfg.fs_root, "trace": cfg.trace}
+                if cfg.fs_readonly
+                else None
             ),
             imports=(
-                dict(trace=cfg.trace, block_subprocess_libs=cfg.no_subprocess)
+                {"trace": cfg.trace, "block_subprocess_libs": cfg.no_subprocess}
                 if cfg.block_native
                 else None
             ),

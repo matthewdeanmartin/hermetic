@@ -229,4 +229,4 @@ def write_sitecustomize(flags: Dict[str, Any]) -> str:
         os.environ["HERMETIC_FLAGS_JSON"] = json.dumps(flags)
         return d
     except Exception as e:
-        raise BootstrapError(f"failed to write sitecustomize: {e}")
+        raise BootstrapError(f"failed to write sitecustomize: {e}") from e

@@ -117,10 +117,10 @@ def install(
             _trace(f"blocked socket.connect_ex host={host} reason=no-network")
             return errno.EACCES
 
-        def sendto(self, bytes: Any, address: Any) -> Any:
+        def sendto(self, data: Any, address: Any) -> Any:
             host = _host_from(address)
             if _is_allowed(host):
-                return super().sendto(bytes, address)
+                return super().sendto(data, address)
             _trace(f"blocked socket.sendto host={host} reason=no-network")
             raise PolicyViolation(f"network disabled: sendto({host})")
 
@@ -172,21 +172,22 @@ def install(
         raise PolicyViolation(f"network disabled: DNS({host})")
 
     def wrap_socket_guard(self: Any, sock: Any, *a: Any, **k: Any) -> Any:
+        # pylint: disable=unused-argument
         _trace("blocked ssl.SSLContext.wrap_socket reason=no-network")
         raise PolicyViolation("network disabled: TLS")
 
-    def socketpair_guard(*a: Any, **k: Any) -> Any:
+    def socketpair_guard(*a: Any, **k: Any) -> Any:  # pylint: disable=unused-argument
         # socketpair creates an in-process bidirectional channel. Block by
         # default — anything legitimately needing IPC can use a Pipe or Queue.
         _trace("blocked socket.socketpair reason=no-network")
         raise PolicyViolation("network disabled: socketpair")
 
-    def fromfd_guard(*a: Any, **k: Any) -> Any:
+    def fromfd_guard(*a: Any, **k: Any) -> Any:  # pylint: disable=unused-argument
         # Reconstructing a socket from a leaked fd bypasses our class. Block.
         _trace("blocked socket.fromfd reason=no-network")
         raise PolicyViolation("network disabled: fromfd")
 
-    def fromshare_guard(*a: Any, **k: Any) -> Any:
+    def fromshare_guard(*a: Any, **k: Any) -> Any:  # pylint: disable=unused-argument
         _trace("blocked socket.fromshare reason=no-network")
         raise PolicyViolation("network disabled: fromshare")
 
