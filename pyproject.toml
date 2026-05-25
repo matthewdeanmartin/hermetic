@@ -17,7 +17,6 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
 ]
 
@@ -35,7 +34,10 @@ hermetic = "hermetic.cli:main"
 
 [dependency-groups]
 dev = [
-    "troml-dev-status",
+    "dont-be-lazy>=0.1.2; python_version >= '3.10'",
+    "pydoc-fork>=3.0.0; python_version >= '3.10'",
+
+    "troml-dev-status; python_version >= '3.9'",
     "jiggle_version",
     "cffi",
     "httpie",
