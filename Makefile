@@ -242,7 +242,7 @@ check-human: fix verify
 check: check-human
 
 .PHONY: check-ci
-check-ci: fix-ci full-verify check-all-docs
+check-ci: full-verify check-all-docs
 
 .PHONY: full-verify
 full-verify: verify check-all-docs
