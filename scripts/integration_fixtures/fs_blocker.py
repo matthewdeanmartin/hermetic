@@ -13,11 +13,13 @@ def test_write(path="test_blocker.txt"):
     if os.path.exists(path):
         os.remove(path)
 
+
 def test_read(path="README.md"):
     print(f"Attempting to read from {path}...")
     with open(path, "r") as f:
         f.read(10)
     print(f"Successfully read from {path}")
+
 
 print("--- Testing FS Readonly ---")
 try:
@@ -41,7 +43,9 @@ try:
     # Actually, Hermetic's _within check is what we test.
     parent_readme = os.path.join("..", "README.md")
     with hermetic_blocker(fs_readonly=True, fs_root=os.path.join(root, "scripts")):
-        test_read("README.md") # README.md is in root, but we restricted to root/scripts
+        test_read(
+            "README.md"
+        )  # README.md is in root, but we restricted to root/scripts
 except PolicyViolation:
     print("FS Root Read Outside: PolicyViolation caught as expected")
 else:

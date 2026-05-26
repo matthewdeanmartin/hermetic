@@ -11,6 +11,7 @@ def test_subproc():
     subprocess.run(cmd, check=True, capture_output=True)
     print("Successfully ran subprocess")
 
+
 print("--- Testing Subprocess Block ---")
 try:
     with hermetic_blocker(block_subprocess=True):

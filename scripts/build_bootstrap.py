@@ -18,9 +18,15 @@ import sys
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
-from hermetic.guards import (code_exec, environment, filesystem,  # noqa
-                             imports_guard, interpreter, network,
-                             subprocess_guard)
+from hermetic.guards import (  # noqa: E402
+    code_exec,
+    environment,
+    filesystem,  # noqa
+    imports_guard,
+    interpreter,
+    network,
+    subprocess_guard,
+)
 
 # Template for the final bootstrap.py file
 # The {guards_code} placeholder will be filled with the concatenated
@@ -115,9 +121,7 @@ def main():
     ]
 
     # Concatenate the bootstrap code from all guard modules
-    all_guards_code = "\n".join(
-        mod.BOOTSTRAP_CODE for mod in guard_modules
-    )
+    all_guards_code = "\n".join(mod.BOOTSTRAP_CODE for mod in guard_modules)
 
     # Indent the guard code to fit into the sitecustomize template
     # Strip first to avoid leading/trailing empty lines causing indentation issues
@@ -126,9 +130,7 @@ def main():
     )
 
     print("Generating hermetic/bootstrap.py...")
-    final_content = BOOTSTRAP_PY_TEMPLATE.format(
-        guards_code=indented_guards_code
-    )
+    final_content = BOOTSTRAP_PY_TEMPLATE.format(guards_code=indented_guards_code)
 
     output_path = os.path.join(PROJECT_ROOT, "hermetic", "bootstrap.py")
     with open(output_path, "w", encoding="utf-8") as f:
@@ -140,4 +142,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-

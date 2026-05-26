@@ -200,8 +200,8 @@ def test_run_bootstrap_win32(mocker):
     assert exc.value.code == 0
 
 
-from hermetic.cli import main
-from hermetic.util import is_same_interpreter
+from hermetic.cli import main  # noqa: E402
+from hermetic.util import is_same_interpreter  # noqa: E402
 
 
 def test_main_help(mocker):
@@ -254,9 +254,9 @@ def test_invoke_inprocess_fallback(mocker):
     assert invoke_inprocess(spec) == {"result": 0}
 
 
-import hermetic.guards.filesystem as fs_guard
-import hermetic.guards.network as net_guard
-import hermetic.guards.subprocess_guard as sub_guard
+import hermetic.guards.filesystem as fs_guard  # noqa: E402
+import hermetic.guards.network as net_guard  # noqa: E402
+import hermetic.guards.subprocess_guard as sub_guard  # noqa: E402
 
 
 def test_network_idempotency():
@@ -318,8 +318,8 @@ def test_subprocess_idempotency():
     sub_guard.uninstall()
 
 
-import hermetic.guards.imports_guard as imp_guard
-from hermetic.guards.imports_guard import _patch_module_attrs
+import hermetic.guards.imports_guard as imp_guard  # noqa: E402
+from hermetic.guards.imports_guard import _patch_module_attrs  # noqa: E402
 
 
 def test_imports_idempotency():

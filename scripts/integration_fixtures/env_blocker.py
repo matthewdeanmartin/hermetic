@@ -10,9 +10,11 @@ def test_env_read():
     val = os.environ.get("PATH")
     print(f"PATH: {val[:20]}...")
 
+
 def test_env_write():
     print("Attempting to write environment...")
     os.environ["HERMETIC_TEST"] = "1"
+
 
 print("--- Testing Environment Block ---")
 try:

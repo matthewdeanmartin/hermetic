@@ -8,6 +8,7 @@ def test_interp_mutation():
     print("Attempting to modify sys.path...")
     sys.path.append("/tmp/test")
 
+
 print("--- Testing Interpreter Mutation Block ---")
 try:
     with hermetic_blocker(block_interpreter_mutation=True):

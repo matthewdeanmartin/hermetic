@@ -8,6 +8,7 @@ def test_code_exec():
     print("Attempting to execute eval...")
     eval("1+1")
 
+
 print("--- Testing Code Exec Block ---")
 try:
     with hermetic_blocker(block_code_exec=True):

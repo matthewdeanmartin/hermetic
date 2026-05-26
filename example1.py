@@ -4,6 +4,7 @@ from hermetic import hermetic_blocker
 @hermetic_blocker(block_network=True)
 def make_request() -> None:
     import socket
+
     socket.getaddrinfo("example.com", 80)
 
 

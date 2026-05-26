@@ -6,7 +6,7 @@ from hermetic.errors import PolicyViolation
 
 def test_native_import():
     print("Attempting to import ctypes...")
-    import ctypes
+
 
 print("--- Testing Native Block ---")
 try:

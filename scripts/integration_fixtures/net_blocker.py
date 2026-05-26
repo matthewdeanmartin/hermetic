@@ -19,6 +19,7 @@ def test_net(host="example.com"):
     except Exception as e:
         print(f"PASS: Not blocked by Hermetic (result: {e})")
 
+
 print("--- Testing Context Manager ---")
 try:
     with hermetic_blocker(block_network=True):
@@ -30,9 +31,12 @@ else:
     sys.exit(1)
 
 print("\n--- Testing Decorator ---")
+
+
 @hermetic_blocker(block_network=True)
 def decorated_test():
     test_net()
+
 
 try:
     decorated_test()
