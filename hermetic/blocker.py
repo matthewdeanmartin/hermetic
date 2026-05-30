@@ -5,7 +5,7 @@ from __future__ import annotations
 import threading
 from contextlib import AbstractAsyncContextManager, ContextDecorator
 from dataclasses import dataclass, field
-from typing import Any, Iterable, List, Optional, Union
+from typing import Any, Iterable, List, Optional
 
 from hermetic.guards import install_all, uninstall_all
 
@@ -248,7 +248,7 @@ def hermetic_blocker(
         )
 
     if profile is not None:
-        from hermetic.profiles import PROFILES, apply_profile  # avoid circular at module level
+        from hermetic.profiles import PROFILES  # avoid circular at module level
 
         prof = PROFILES.get(profile)
         if prof is None:

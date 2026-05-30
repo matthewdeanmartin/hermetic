@@ -105,10 +105,14 @@ def install(*, fs_root: str | None = None, trace: bool = False) -> None:
         mode_str = mode if isinstance(mode, str) else "r"
         if any(m in mode_str for m in ("w", "a", "x", "+")):
             _trace(f"blocked open write path={path}")
-            raise PolicyViolation(f"filesystem readonly: {path}", guard="filesystem", target=path)
+            raise PolicyViolation(
+                f"filesystem readonly: {path}", guard="filesystem", target=path
+            )
         if _root and not _is_within(path, _root):
             _trace(f"blocked open read-outside-root path={path}")
-            raise PolicyViolation(f"read outside sandbox root: {path}", guard="filesystem", target=path)
+            raise PolicyViolation(
+                f"read outside sandbox root: {path}", guard="filesystem", target=path
+            )
         return _originals["open"](file, mode, *a, **k)
 
     WRITE_FLAGS = (

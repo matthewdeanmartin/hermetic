@@ -25,13 +25,13 @@ If `pytest` reports `fixture 'mocker' not found` or `ImportError: No module name
 The right responses:
 
 1. **First try `uv run <command>`.** If the dep is already declared and locked, this just works — the previous failure was caused by running the system Python instead of the venv Python.
-2. **If the dep truly is missing**, add it the uv way:
+1. **If the dep truly is missing**, add it the uv way:
    ```bash
    uv add --group dev <pkg>      # for dev/test deps
    uv add <pkg>                  # for runtime deps
    uv sync                       # after editing pyproject.toml manually
    ```
-3. **Never** run `pip install` directly against the active Python unless the user explicitly asks.
+1. **Never** run `pip install` directly against the active Python unless the user explicitly asks.
 
 ### Common commands
 

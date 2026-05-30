@@ -1,66 +1,24 @@
 # hermetic
 
+This is lightweight sandboxing for semi-trusted code or for disabling APIs in unit tests. What is semi-trusted code?
+Things like pluggy plugins, LLM generated code. Unit test code is trusted, but as design decision, you may want to 
+avoid accidentally creating integration tests.
+
 Run a python tool, or your application with certain APIs disabled, such as network or subprocess.
 
 The previously safe library you depend on was hijacked and will be sending your password files to a remote server.
 Or you installed this and the malicious hackers didn't include evasive code to defeat this fig leaf of a security
 feature and the day is saved.
 
-If Alice and Bob know about your application and specifically are targeting this, this tool won't help.
+If Alice and Bob know about your application and specifically are targeting this, this tool won't help. See docs for
+a discussion of how to defeat hermetic-seal.
 
 ## Usage
 
-### Command-Line Interface
-
-Use the `hermetic` command to run any Python console script, separating its arguments with `--`.
-
-**Syntax**: `hermetic [flags] -- <command> [command_args]`
-
-#### Common Flags:
-
-- `--no-network`: Disable all network activity.
-- `--allow-localhost`: Allows network connections to localhost (used with `--no-network`).
-- `--allow-domain <domain>`: Allows connections to a specific domain (repeatable).
-- `--no-subprocess`: Disable creating new processes.
-- `--fs-readonly[=/path/to/root]`: Make the filesystem read-only. Optionally, restrict all reads to be within the specified root directory.
-- `--no-environment`: Disable environment variable reads and mutations.
-- `--no-code-exec`: Disable `eval`, `exec`, `compile`, and `runpy` execution helpers.
-- `--deny-import <module>`: Deny importing a module or package prefix (repeatable).
-- `--no-interpreter-mutation`: Disable `sys.path`, `cwd`, and `site` mutation surfaces.
-- `--block-native`: Block imports of native C extensions.
-- `--profile <name>`: Apply a pre-configured profile (e.g., `block-all`).
-- `--trace`: Print a message to stderr when an action is blocked.
-
-#### CLI Examples:
-
-**Block network access for the `httpie` tool:**
-
-```bash
-$ hermetic --no-network -- http [https://example.com](https://example.com)
-
-hermetic: blocked action: network disabled: DNS(example.com)
-```
-
-**Run a script in a read-only filesystem where it can only read from `./sandbox`:**
-
-```bash
-$ hermetic --fs-readonly=./sandbox -- python my_script.py
-
-# my_script.py will raise PolicyViolation if it tries to read outside ./sandbox
-# or write anywhere.
-```
-
-**Apply the `block-all` profile to completely lock down a script:**
-
-```bash
-$ hermetic --profile block-all -- my_analyzer.py --input data.csv
-```
-
-______________________________________________________________________
-
 ### Programmatic API
 
-You can use `hermetic` directly in your Python code via the `hermetic_blocker` context manager or the `@with_hermetic` decorator.
+You can use `hermetic` directly in your Python code via the `hermetic_blocker` context manager or the `@with_hermetic`
+decorator.
 
 #### Decorator
 
@@ -70,6 +28,7 @@ The `@with_hermetic` decorator is the easiest way to apply guards to an entire f
 from hermetic import with_hermetic
 import requests
 
+
 @with_hermetic(block_network=True, allow_domains=["api.internal.com"])
 def process_data():
     # This will fail because all network access is blocked by default.
@@ -77,6 +36,7 @@ def process_data():
 
     # This is allowed because the domain is on the allow-list.
     return requests.get("https://api.internal.com/data")
+
 
 process_data()
 ```
@@ -89,6 +49,7 @@ For more granular control, use the `hermetic_blocker` context manager.
 from hermetic import hermetic_blocker
 import os
 
+
 def check_system():
     # Subprocesses are allowed here
     os.system("echo 'Checking system...'")
@@ -96,10 +57,11 @@ def check_system():
     with hermetic_blocker(block_subprocess=True):
         # Inside this block, os.system() would raise a PolicyViolation
         print("Running in a sandboxed context.")
-        os.system("echo 'This will fail.'") # --> raises PolicyViolation
+        os.system("echo 'This will fail.'")  # --> raises PolicyViolation
 
     # Subprocesses are allowed again
     os.system("echo 'Exited sandbox.'")
+
 
 check_system()
 ```
@@ -137,3 +99,50 @@ For stronger sandboxing, consider:
 - [pysandbox](https://github.com/vstinner/pysandbox): Uses Linux `seccomp` for kernel-level syscall filtering.
 - [RestrictedPython](https://pypi.org/project/RestrictedPython/): Rewrites Python AST to enforce constraints.
 - [Docker](https://www.docker.com/): OS-level virtualization.
+
+### Command-Line Interface
+
+Use the `hermetic` command to run any Python console script, separating its arguments with `--`.
+
+**Syntax**: `hermetic [flags] -- <command> [command_args]`
+
+#### Common Flags:
+
+- `--no-network`: Disable all network activity.
+- `--allow-localhost`: Allows network connections to localhost (used with `--no-network`).
+- `--allow-domain <domain>`: Allows connections to a specific domain (repeatable).
+- `--no-subprocess`: Disable creating new processes.
+- `--fs-readonly[=/path/to/root]`: Make the filesystem read-only. Optionally, restrict all reads to be within the
+  specified root directory.
+- `--no-environment`: Disable environment variable reads and mutations.
+- `--no-code-exec`: Disable `eval`, `exec`, `compile`, and `runpy` execution helpers.
+- `--deny-import <module>`: Deny importing a module or package prefix (repeatable).
+- `--no-interpreter-mutation`: Disable `sys.path`, `cwd`, and `site` mutation surfaces.
+- `--block-native`: Block imports of native C extensions.
+- `--profile <name>`: Apply a pre-configured profile (e.g., `block-all`).
+- `--trace`: Print a message to stderr when an action is blocked.
+
+#### CLI Examples:
+
+**Block network access for the `httpie` tool:**
+
+```bash
+$ hermetic --no-network -- http [https://example.com](https://example.com)
+
+hermetic: blocked action: network disabled: DNS(example.com)
+```
+
+**Run a script in a read-only filesystem where it can only read from `./sandbox`:**
+
+```bash
+$ hermetic --fs-readonly=./sandbox -- python my_script.py
+
+# my_script.py will raise PolicyViolation if it tries to read outside ./sandbox
+# or write anywhere.
+```
+
+**Apply the `block-all` profile to completely lock down a script:**
+
+```bash
+$ hermetic --profile block-all -- my_analyzer.py --input data.csv
+```

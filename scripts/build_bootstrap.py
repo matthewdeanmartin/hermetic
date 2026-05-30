@@ -18,15 +18,10 @@ import sys
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
-from hermetic.guards import (  # noqa: E402
-    code_exec,
-    environment,
-    filesystem,  # noqa
-    imports_guard,
-    interpreter,
-    network,
-    subprocess_guard,
-)
+from hermetic.guards import filesystem  # noqa
+from hermetic.guards import (code_exec, environment,  # noqa: E402
+                             imports_guard, interpreter, network,
+                             subprocess_guard)
 
 # Template for the final bootstrap.py file
 # The {guards_code} placeholder will be filled with the concatenated

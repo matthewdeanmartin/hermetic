@@ -11,7 +11,6 @@ from hermetic.blocker import BlockConfig, hermetic_blocker, with_hermetic
 from hermetic.errors import PolicyViolation
 from hermetic.profiles import GuardConfig
 
-
 # ============================================================================
 # 1. PolicyViolation.guard and .target attributes
 # ============================================================================
@@ -43,6 +42,7 @@ class TestPolicyViolationAttributes:
     def test_subprocess_guard_raises_with_guard_attr(self):
         with hermetic_blocker(block_subprocess=True):
             import subprocess
+
             try:
                 subprocess.run(["echo", "hi"])
             except PolicyViolation as e:
@@ -63,6 +63,7 @@ class TestPolicyViolationAttributes:
 
     def test_environment_guard_raises_with_guard_attr(self):
         import os
+
         with hermetic_blocker(block_environment=True):
             try:
                 os.environ["PATH"]
@@ -93,6 +94,7 @@ class TestPolicyViolationAttributes:
 
     def test_interpreter_guard_raises_with_guard_attr(self, tmp_path):
         import sys
+
         with hermetic_blocker(block_interpreter_mutation=True):
             try:
                 sys.path.append(str(tmp_path))
@@ -309,6 +311,7 @@ class TestHermeticBlockerProfileKwarg:
     def test_profile_exec_deny_blocks_subprocess(self):
         with hermetic_blocker(profile="exec-deny"):
             import subprocess
+
             with pytest.raises(PolicyViolation, match="subprocess disabled"):
                 subprocess.run(["echo", "hi"])
 
@@ -321,6 +324,7 @@ class TestHermeticBlockerProfileKwarg:
             with pytest.raises(PolicyViolation):
                 socket.getaddrinfo("example.com", 80)
             import subprocess
+
             with pytest.raises(PolicyViolation):
                 subprocess.run(["echo", "hi"])
 

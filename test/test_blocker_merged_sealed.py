@@ -8,7 +8,6 @@ import hermetic.blocker as blocker_mod
 from hermetic.blocker import BlockConfig, _effective_config, hermetic_blocker
 from hermetic.profiles import PROFILES, GuardConfig, apply_profile
 
-
 # ============================================================================
 # BlockConfig.merged_with
 # ============================================================================
@@ -280,7 +279,9 @@ class TestSealedMode:
     def test_sealed_mode_skips_uninstall(self, monkeypatch):
         uninstall_calls = []
         monkeypatch.setattr(blocker_mod, "install_all", lambda **k: None)
-        monkeypatch.setattr(blocker_mod, "uninstall_all", lambda: uninstall_calls.append(1))
+        monkeypatch.setattr(
+            blocker_mod, "uninstall_all", lambda: uninstall_calls.append(1)
+        )
         blocker_mod._SEALED = True
 
         from hermetic.blocker import _reapply_guards_locked
@@ -292,7 +293,9 @@ class TestSealedMode:
 
     def test_reapply_sealed_with_empty_stack_does_nothing(self, monkeypatch):
         install_calls = []
-        monkeypatch.setattr(blocker_mod, "install_all", lambda **k: install_calls.append(1))
+        monkeypatch.setattr(
+            blocker_mod, "install_all", lambda **k: install_calls.append(1)
+        )
         monkeypatch.setattr(blocker_mod, "uninstall_all", lambda: None)
         blocker_mod._SEALED = True
 

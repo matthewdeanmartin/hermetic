@@ -36,7 +36,11 @@ class _GuardedList(list[Any]):
                 file=sys.stderr,
                 flush=True,
             )
-        raise PolicyViolation(f"interpreter mutation disabled: {self._label}", guard="interpreter", target=self._label)
+        raise PolicyViolation(
+            f"interpreter mutation disabled: {self._label}",
+            guard="interpreter",
+            target=self._label,
+        )
 
     def append(self, item: Any) -> None:  # pylint: disable=unused-argument
         """Block appending to the guarded list."""
@@ -108,7 +112,11 @@ class _GuardedDict(dict[Any, Any]):
                 file=sys.stderr,
                 flush=True,
             )
-        raise PolicyViolation(f"interpreter mutation disabled: {self._label}", guard="interpreter", target=self._label)
+        raise PolicyViolation(
+            f"interpreter mutation disabled: {self._label}",
+            guard="interpreter",
+            target=self._label,
+        )
 
     def __setitem__(self, key: Any, value: Any) -> None:
         """Block item assignment on the guarded mapping."""
@@ -169,17 +177,27 @@ def install(*, trace: bool = False) -> None:
     def _deny_chdir(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
         """Reject attempts to change the current working directory."""
         _trace("blocked os.chdir")
-        raise PolicyViolation("interpreter mutation disabled: chdir", guard="interpreter", target="chdir")
+        raise PolicyViolation(
+            "interpreter mutation disabled: chdir", guard="interpreter", target="chdir"
+        )
 
     def _deny_fchdir(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
         """Reject attempts to change directories by file descriptor."""
         _trace("blocked os.fchdir")
-        raise PolicyViolation("interpreter mutation disabled: fchdir", guard="interpreter", target="fchdir")
+        raise PolicyViolation(
+            "interpreter mutation disabled: fchdir",
+            guard="interpreter",
+            target="fchdir",
+        )
 
     def _deny_addsitedir(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
         """Reject attempts to extend site-package search paths."""
         _trace("blocked site.addsitedir")
-        raise PolicyViolation("interpreter mutation disabled: addsitedir", guard="interpreter", target="addsitedir")
+        raise PolicyViolation(
+            "interpreter mutation disabled: addsitedir",
+            guard="interpreter",
+            target="addsitedir",
+        )
 
     sys.path = _GuardedList(list(sys.path), "sys.path", trace=trace)
     sys.meta_path = _GuardedList(list(sys.meta_path), "sys.meta_path", trace=trace)

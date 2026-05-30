@@ -62,7 +62,9 @@ _CFFI_ATTRS = ("FFI", "dlopen", "verify")
 
 def _deny_use(name: str) -> Any:
     """Raise a policy violation for direct native interface use."""
-    raise PolicyViolation(f"native interface blocked: {name}", guard="imports", target=name)
+    raise PolicyViolation(
+        f"native interface blocked: {name}", guard="imports", target=name
+    )
 
 
 class _NativeExtensionFinder:
@@ -78,7 +80,9 @@ class _NativeExtensionFinder:
         spec = mach.PathFinder.find_spec(fullname, path, target)
         if spec and isinstance(spec.loader, self._ext_loader_type):
             self._trace(f"blocked native import spec={fullname}")
-            raise PolicyViolation(f"native import blocked: {fullname}", guard="imports", target=fullname)
+            raise PolicyViolation(
+                f"native import blocked: {fullname}", guard="imports", target=fullname
+            )
         return spec
 
 
@@ -175,7 +179,11 @@ def install(
             def create_module(self, spec: Any) -> Any:
                 """Reject native module creation during import loading."""
                 _trace(f"blocked native import spec={spec.name}")
-                raise PolicyViolation(f"native import blocked: {spec.name}", guard="imports", target=spec.name)
+                raise PolicyViolation(
+                    f"native import blocked: {spec.name}",
+                    guard="imports",
+                    target=spec.name,
+                )
 
     def guarded_import(
         name: str,
@@ -187,7 +195,9 @@ def install(
         """Reject denied imports before delegating to Python's importer."""
         if any(_matches_denied_import(name, denied_name) for denied_name in deny_names):
             _trace(f"blocked import name={name}")
-            raise PolicyViolation(f"import blocked: {name}", guard="imports", target=name)
+            raise PolicyViolation(
+                f"import blocked: {name}", guard="imports", target=name
+            )
         return _originals["__import__"](name, globals, locals, fromlist, level)
 
     if block_native:

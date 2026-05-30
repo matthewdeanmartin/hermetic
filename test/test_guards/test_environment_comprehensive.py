@@ -9,7 +9,6 @@ import pytest
 from hermetic.errors import PolicyViolation
 from hermetic.guards.environment import install, uninstall
 
-
 # Each test installs and uninstalls within a try/finally so that pytest's own
 # teardown machinery (which reads os.environ for terminal/color settings) never
 # runs while the guard is active.
