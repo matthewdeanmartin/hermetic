@@ -37,6 +37,23 @@ _SUBPROC_REPLACEMENT_NAMES = {
     "delegator",
 }
 
+# Serialization modules whose load-side (`pickle.loads`, `marshal.loads`,
+# `shelve.open(...)['k']`) invokes arbitrary callables named by the byte
+# stream. We can't realistically patch every reachable callable, so when the
+# caller has opted out of dynamic code execution we refuse the imports
+# wholesale. Plugins that legitimately need serialization can use JSON,
+# configparser, msgpack-without-ext, etc.
+_PICKLE_NAMES = {
+    "pickle",
+    "_pickle",
+    "cPickle",  # py2-era alias; harmless to list, free coverage if a venv has it
+    "marshal",
+    "shelve",
+    "dill",
+    "cloudpickle",
+    "jsonpickle",
+}
+
 _CTYPES_ATTRS = ("CDLL", "PyDLL", "WinDLL", "OleDLL", "LibraryLoader")
 _CTYPES_LOADER_ATTRS = ("cdll", "pydll", "windll", "oledll")
 _CTYPES_UTIL_ATTRS = ("find_library", "find_msvcrt")
@@ -45,7 +62,7 @@ _CFFI_ATTRS = ("FFI", "dlopen", "verify")
 
 def _deny_use(name: str) -> Any:
     """Raise a policy violation for direct native interface use."""
-    raise PolicyViolation(f"native interface blocked: {name}")
+    raise PolicyViolation(f"native interface blocked: {name}", guard="imports", target=name)
 
 
 class _NativeExtensionFinder:
@@ -61,7 +78,7 @@ class _NativeExtensionFinder:
         spec = mach.PathFinder.find_spec(fullname, path, target)
         if spec and isinstance(spec.loader, self._ext_loader_type):
             self._trace(f"blocked native import spec={fullname}")
-            raise PolicyViolation(f"native import blocked: {fullname}")
+            raise PolicyViolation(f"native import blocked: {fullname}", guard="imports", target=fullname)
         return spec
 
 
@@ -119,6 +136,7 @@ def install(
     block_native: bool = True,
     trace: bool = False,
     block_subprocess_libs: bool = False,
+    block_pickle: bool = False,
     deny_imports: Iterable[str] = (),
 ) -> None:
     """Patch import machinery to reject configured modules and FFI surfaces."""
@@ -136,6 +154,8 @@ def install(
         deny_names |= _DENY_NAMES
     if block_native and block_subprocess_libs:
         deny_names |= _SUBPROC_REPLACEMENT_NAMES
+    if block_pickle:
+        deny_names |= _PICKLE_NAMES
 
     def _trace(msg: str) -> None:
         """Emit a trace message when an import is blocked."""
@@ -155,7 +175,7 @@ def install(
             def create_module(self, spec: Any) -> Any:
                 """Reject native module creation during import loading."""
                 _trace(f"blocked native import spec={spec.name}")
-                raise PolicyViolation(f"native import blocked: {spec.name}")
+                raise PolicyViolation(f"native import blocked: {spec.name}", guard="imports", target=spec.name)
 
     def guarded_import(
         name: str,
@@ -167,7 +187,7 @@ def install(
         """Reject denied imports before delegating to Python's importer."""
         if any(_matches_denied_import(name, denied_name) for denied_name in deny_names):
             _trace(f"blocked import name={name}")
-            raise PolicyViolation(f"import blocked: {name}")
+            raise PolicyViolation(f"import blocked: {name}", guard="imports", target=name)
         return _originals["__import__"](name, globals, locals, fromlist, level)
 
     if block_native:
@@ -206,17 +226,20 @@ def uninstall() -> None:
 BOOTSTRAP_CODE = dedent(
     r"""
 # --- strict imports ---
-if cfg.get("block_native") or cfg.get("deny_imports"):
+if cfg.get("block_native") or cfg.get("deny_imports") or cfg.get("no_code_exec"):
     _origExt = mach.ExtensionFileLoader
     _origImp = builtins.__import__
     _origMetaPath = sys.meta_path
     _BLOCK_NATIVE = bool(cfg.get("block_native"))
     _BLOCK_SUBPROC_LIBS = bool(cfg.get("no_subprocess"))
+    _BLOCK_PICKLE = bool(cfg.get("no_code_exec"))
     _DENY = set([n for n in cfg.get("deny_imports", []) if n])
     if _BLOCK_NATIVE:
         _DENY |= {"ctypes","_ctypes","cffi","_cffi_backend"}
     if _BLOCK_NATIVE and _BLOCK_SUBPROC_LIBS:
         _DENY |= {"sh","pexpect","plumbum","sarge","delegator"}
+    if _BLOCK_PICKLE:
+        _DENY |= {"pickle","_pickle","cPickle","marshal","shelve","dill","cloudpickle","jsonpickle"}
     def _trimp(n): _tr(f"blocked import name={n}")
     def _deny_native_use(name): raise _HPolicy(f"native interface blocked: {name}")
     def _match_import(name, denied):

@@ -1,0 +1,30 @@
+# Debian (glibc / apt) — Python 3.14
+#
+# The "mainstream" reference Linux: glibc, dpkg/apt, manylinux-compatible
+# wheels. If the native-extension and subprocess guards behave anywhere,
+# they should behave here.
+FROM python:3.14-slim-bookworm
+
+# uv: the project's package manager. Copied from the official image so we
+# don't depend on a network installer at build time.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+ENV UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Sync dependencies first (cached unless the lock/manifest changes), then
+# copy the rest of the tree. --no-dev: the smoke scripts only need the project
+# itself (uv run hermetic / python), not the dev toolchain, so we skip the
+# extras that would otherwise compile.
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+
+COPY . .
+RUN uv sync --frozen --no-dev
+
+# Run both smoke suites; non-zero exit on any failure propagates out.
+CMD ["bash", "-c", "uv run --no-dev bash ./scripts/basic_checks.sh && uv run --no-dev bash ./scripts/integration_tests.sh"]

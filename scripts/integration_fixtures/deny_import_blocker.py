@@ -6,6 +6,11 @@ from hermetic.errors import PolicyViolation
 
 def test_deny_import():
     print("Attempting to import math...")
+    import math
+
+    # Reference the import so linters/autoflake never strip it; without an
+    # actual import the deny_imports guard has nothing to fire on.
+    print(math.pi)
 
 
 print("--- Testing Deny Import ---")

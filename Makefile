@@ -46,6 +46,8 @@ help:
 	@echo "  test                 Run pytest plus smoke tests"
 	@echo "  benchmark            Run performance benchmarks"
 	@echo "  docker-test          Build test image and run pytest in Docker (3.14, no tox)"
+	@echo "  docker-smoke         Run smoke suites on Debian/Alpine/Fedora (Python 3.14)"
+	@echo "  docker-smoke-<distro> Run smoke suites on one distro (debian|alpine|fedora)"
 	@echo "  pre-commit           Run pre-commit hooks"
 	@echo "  check-docs           Run documentation checks"
 	@echo "  check-md             Run markdown checks in read-only mode"
@@ -229,6 +231,23 @@ docker-test:
 	docker build -f Dockerfile.test -t $(DOCKER_TEST_IMAGE):$(DOCKER_TEST_TAG) .
 	@echo "Running tests in container"
 	docker run --rm $(DOCKER_TEST_IMAGE):$(DOCKER_TEST_TAG)
+
+# ── Cross-distro smoke tests (Python 3.14 on 3 dissimilar Linuxes) ───────────
+# Runs scripts/basic_checks.sh + integration_tests.sh inside Debian (glibc/apt),
+# Alpine (musl/apk), and Fedora (glibc/dnf) to catch platform-specific guard
+# regressions like the native-extension blocker. Build context is the repo root.
+DOCKER_SMOKE_DISTROS := debian alpine fedora
+
+.PHONY: docker-smoke
+docker-smoke: $(addprefix docker-smoke-,$(DOCKER_SMOKE_DISTROS))
+	@echo "All cross-distro smoke suites passed."
+
+.PHONY: docker-smoke-%
+docker-smoke-%:
+	@echo "=== [$*] building hermetic-smoke-$* (Python 3.14) ==="
+	docker build -f scripts/docker/Dockerfile.$* -t hermetic-smoke-$*:$(DOCKER_TEST_TAG) .
+	@echo "=== [$*] running smoke suites ==="
+	docker run --rm hermetic-smoke-$*:$(DOCKER_TEST_TAG)
 
 .PHONY: pre-commit
 pre-commit: uv-lock install-plugins

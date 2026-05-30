@@ -5,7 +5,7 @@ from __future__ import annotations
 import threading
 from contextlib import AbstractAsyncContextManager, ContextDecorator
 from dataclasses import dataclass, field
-from typing import Any, Iterable, List, Optional
+from typing import Any, Iterable, List, Optional, Union
 
 from hermetic.guards import install_all, uninstall_all
 
@@ -70,6 +70,10 @@ class BlockConfig:
             data[mapping[k]] = v
         return cls(**data)
 
+    def __or__(self, other: "BlockConfig") -> "BlockConfig":
+        """Merge two policies; stricter settings win.  Alias for ``merged_with``."""
+        return self.merged_with(other)
+
     def merged_with(self, other: "BlockConfig") -> "BlockConfig":
         """Combine two policies so the stricter settings win."""
         return BlockConfig(
@@ -121,9 +125,10 @@ def _install_for_config(cfg: BlockConfig) -> None:
                 "block_native": cfg.block_native,
                 "trace": cfg.trace,
                 "block_subprocess_libs": cfg.block_subprocess,
+                "block_pickle": cfg.block_code_exec,
                 "deny_imports": cfg.deny_imports,
             }
-            if cfg.block_native or cfg.deny_imports
+            if cfg.block_native or cfg.deny_imports or cfg.block_code_exec
             else None
         ),
     )
@@ -189,6 +194,7 @@ class _HermeticBlocker(
 
 
 def hermetic_blocker(
+    _config: Optional[BlockConfig] = None,
     *,
     block_network: bool = False,
     block_subprocess: bool = False,
@@ -203,27 +209,74 @@ def hermetic_blocker(
     deny_imports: Iterable[str] = (),
     trace: bool = False,
     sealed: bool = False,
+    profile: Optional[str] = None,
 ) -> _HermeticBlocker:
-    """Build a blocker that applies the requested hermetic guards."""
-    cfg = BlockConfig(
-        block_network=block_network,
-        block_subprocess=block_subprocess,
-        fs_readonly=fs_readonly,
-        fs_root=fs_root,
-        block_environment=block_environment,
-        block_code_exec=block_code_exec,
-        block_interpreter_mutation=block_interpreter_mutation,
-        block_native=block_native,
-        allow_localhost=allow_localhost,
-        allow_domains=list(allow_domains or ()),
-        deny_imports=list(deny_imports or ()),
-        trace=trace,
-        sealed=sealed,
-    )
+    """Build a blocker that applies the requested hermetic guards.
+
+    Can be called in three ways::
+
+        # 1. Keyword arguments (original API)
+        hermetic_blocker(block_network=True)
+
+        # 2. Pre-built BlockConfig object
+        hermetic_blocker(BlockConfig(block_network=True))
+
+        # 3. Named profile
+        hermetic_blocker(profile="net-hermetic")
+    """
+    if _config is not None:
+        if not isinstance(_config, BlockConfig):
+            raise TypeError(
+                f"hermetic_blocker() positional argument must be a BlockConfig, got {type(_config).__name__}"
+            )
+        cfg = _config
+    else:
+        cfg = BlockConfig(
+            block_network=block_network,
+            block_subprocess=block_subprocess,
+            fs_readonly=fs_readonly,
+            fs_root=fs_root,
+            block_environment=block_environment,
+            block_code_exec=block_code_exec,
+            block_interpreter_mutation=block_interpreter_mutation,
+            block_native=block_native,
+            allow_localhost=allow_localhost,
+            allow_domains=list(allow_domains or ()),
+            deny_imports=list(deny_imports or ()),
+            trace=trace,
+            sealed=sealed,
+        )
+
+    if profile is not None:
+        from hermetic.profiles import PROFILES, apply_profile  # avoid circular at module level
+
+        prof = PROFILES.get(profile)
+        if prof is None:
+            raise ValueError(f"Unknown hermetic profile: {profile!r}")
+        # Convert GuardConfig → BlockConfig fields and merge
+        profile_cfg = BlockConfig(
+            block_network=prof.no_network,
+            block_subprocess=prof.no_subprocess,
+            fs_readonly=prof.fs_readonly,
+            fs_root=prof.fs_root,
+            block_environment=prof.no_environment,
+            block_code_exec=prof.no_code_exec,
+            block_interpreter_mutation=prof.no_interpreter_mutation,
+            block_native=prof.block_native,
+            allow_localhost=prof.allow_localhost,
+            allow_domains=list(prof.allow_domains),
+            deny_imports=list(prof.deny_imports),
+            trace=prof.trace,
+            sealed=prof.sealed,
+        )
+        cfg = cfg | profile_cfg
+
     return _HermeticBlocker(cfg)
 
 
 # Optional convenience decorator with arguments name parity
-def with_hermetic(**kwargs: Any) -> _HermeticBlocker:
+def with_hermetic(
+    _config: Optional[BlockConfig] = None, **kwargs: Any
+) -> _HermeticBlocker:
     """Mirror `hermetic_blocker` under a decorator-friendly name."""
-    return hermetic_blocker(**kwargs)
+    return hermetic_blocker(_config, **kwargs)

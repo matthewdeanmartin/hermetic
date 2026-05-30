@@ -39,12 +39,12 @@ class _GuardedEnviron(MutableMapping[_KT, _VT]):
     def _deny_read(self) -> Never:
         """Reject any attempt to inspect environment state."""
         self._trace("blocked environment read")
-        raise PolicyViolation("environment disabled")
+        raise PolicyViolation("environment disabled", guard="environment")
 
     def _deny_write(self) -> Never:
         """Reject any attempt to mutate environment state."""
         self._trace("blocked environment mutation")
-        raise PolicyViolation("environment mutation disabled")
+        raise PolicyViolation("environment mutation disabled", guard="environment")
 
     def __getitem__(self, key: _KT) -> _VT:
         """Block environment key lookups."""
@@ -139,12 +139,12 @@ def install(*, trace: bool = False) -> None:
     def _deny_read(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
         """Reject helper-based environment reads."""
         _trace("blocked environment read")
-        raise PolicyViolation("environment disabled")
+        raise PolicyViolation("environment disabled", guard="environment")
 
     def _deny_write(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
         """Reject helper-based environment mutations."""
         _trace("blocked environment mutation")
-        raise PolicyViolation("environment mutation disabled")
+        raise PolicyViolation("environment mutation disabled", guard="environment")
 
     os.environ = cast(Any, _GuardedEnviron(os.environ, trace=trace))
     if hasattr(os, "environb"):

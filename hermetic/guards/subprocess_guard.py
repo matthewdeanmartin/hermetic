@@ -72,6 +72,30 @@ def install(*, trace: bool = False) -> None:
     extra_modules: list[tuple[str, tuple[str, ...]]] = [
         ("_posixsubprocess", ("fork_exec",)),
         ("posix", ("fork", "forkpty", "system", "posix_spawn", "posix_spawnp")),
+        # `nt` is the Windows analogue of `posix`: `os.system` IS `nt.system`,
+        # `os.startfile` IS `nt.startfile`, etc. Patching `os.*` only rebinds
+        # the attribute on the `os` module — pickle's find_class("nt","system")
+        # reaches the C-level alias directly. Patch the spawn/exec surface on
+        # `nt` too so the alias route can't bypass the guard.
+        (
+            "nt",
+            (
+                "system",
+                "startfile",
+                "execv",
+                "execve",
+                "execvp",
+                "execvpe",
+                "spawnl",
+                "spawnle",
+                "spawnlp",
+                "spawnlpe",
+                "spawnv",
+                "spawnve",
+                "spawnvp",
+                "spawnvpe",
+            ),
+        ),
         ("pty", ("fork", "spawn", "openpty")),
         ("_winapi", ("CreateProcess",)),
     ]
@@ -107,7 +131,7 @@ def install(*, trace: bool = False) -> None:
     def _raise(*a: Any, **k: Any) -> Never:  # pylint: disable=unused-argument
         """Reject process creation through any patched entry point."""
         _trace("blocked subprocess reason=no-subprocess")
-        raise PolicyViolation("subprocess disabled")
+        raise PolicyViolation("subprocess disabled", guard="subprocess")
 
     for mod, funcs in targets.items():
         for name in funcs:
@@ -166,6 +190,7 @@ if cfg.get("no_subprocess"):
     extra_modules = [
         ("_posixsubprocess", ("fork_exec",)),
         ("posix", ("fork", "forkpty", "system", "posix_spawn", "posix_spawnp")),
+        ("nt", ("system", "startfile", "execv", "execve", "execvp", "execvpe", "spawnl", "spawnle", "spawnlp", "spawnlpe", "spawnv", "spawnve", "spawnvp", "spawnvpe")),
         ("pty", ("fork", "spawn", "openpty")),
         ("_winapi", ("CreateProcess",)),
     ]

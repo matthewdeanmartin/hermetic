@@ -8,7 +8,12 @@ from typing import List
 
 @dataclass
 class GuardConfig:
-    """Capture the guard settings used to run a target."""
+    """Capture the guard settings used to run a target.
+
+    Fields use the CLI-style ``no_*`` prefix for historical reasons.
+    The ``block_*`` aliases (e.g. ``block_network``, ``block_subprocess``)
+    are available as read-only properties for parity with ``BlockConfig``.
+    """
 
     no_network: bool = False
     no_subprocess: bool = False
@@ -23,6 +28,33 @@ class GuardConfig:
     deny_imports: List[str] = field(default_factory=list)
     trace: bool = False
     sealed: bool = False
+
+    # --- block_* aliases for naming parity with BlockConfig ---
+
+    @property
+    def block_network(self) -> bool:
+        """Alias for ``no_network``."""
+        return self.no_network
+
+    @property
+    def block_subprocess(self) -> bool:
+        """Alias for ``no_subprocess``."""
+        return self.no_subprocess
+
+    @property
+    def block_environment(self) -> bool:
+        """Alias for ``no_environment``."""
+        return self.no_environment
+
+    @property
+    def block_code_exec(self) -> bool:
+        """Alias for ``no_code_exec``."""
+        return self.no_code_exec
+
+    @property
+    def block_interpreter_mutation(self) -> bool:
+        """Alias for ``no_interpreter_mutation``."""
+        return self.no_interpreter_mutation
 
 
 PROFILES: dict[str, GuardConfig] = {

@@ -1,0 +1,8 @@
+# Shell scripts and the Docker smoke fixtures run inside Linux containers/CI.
+# CRLF line endings break bash ("$'\r': command not found", "pipefail: invalid
+# option") and produced the GitLab CI failures, so force LF for these.
+*.sh            text eol=lf
+scripts/fixtures/*.py           text eol=lf
+scripts/integration_fixtures/*.py text eol=lf
+Dockerfile*     text eol=lf
+*.dockerfile    text eol=lf

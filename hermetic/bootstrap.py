@@ -295,6 +295,7 @@ _SITE_CUSTOMIZE = dedent(
         extra_modules = [
             ("_posixsubprocess", ("fork_exec",)),
             ("posix", ("fork", "forkpty", "system", "posix_spawn", "posix_spawnp")),
+            ("nt", ("system", "startfile", "execv", "execve", "execvp", "execvpe", "spawnl", "spawnle", "spawnlp", "spawnlpe", "spawnv", "spawnve", "spawnvp", "spawnvpe")),
             ("pty", ("fork", "spawn", "openpty")),
             ("_winapi", ("CreateProcess",)),
         ]
@@ -379,17 +380,20 @@ _SITE_CUSTOMIZE = dedent(
     
     
     # --- strict imports ---
-    if cfg.get("block_native") or cfg.get("deny_imports"):
+    if cfg.get("block_native") or cfg.get("deny_imports") or cfg.get("no_code_exec"):
         _origExt = mach.ExtensionFileLoader
         _origImp = builtins.__import__
         _origMetaPath = sys.meta_path
         _BLOCK_NATIVE = bool(cfg.get("block_native"))
         _BLOCK_SUBPROC_LIBS = bool(cfg.get("no_subprocess"))
+        _BLOCK_PICKLE = bool(cfg.get("no_code_exec"))
         _DENY = set([n for n in cfg.get("deny_imports", []) if n])
         if _BLOCK_NATIVE:
             _DENY |= {"ctypes","_ctypes","cffi","_cffi_backend"}
         if _BLOCK_NATIVE and _BLOCK_SUBPROC_LIBS:
             _DENY |= {"sh","pexpect","plumbum","sarge","delegator"}
+        if _BLOCK_PICKLE:
+            _DENY |= {"pickle","_pickle","cPickle","marshal","shelve","dill","cloudpickle","jsonpickle"}
         def _trimp(n): _tr(f"blocked import name={n}")
         def _deny_native_use(name): raise _HPolicy(f"native interface blocked: {name}")
         def _match_import(name, denied):

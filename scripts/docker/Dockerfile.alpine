@@ -1,0 +1,30 @@
+# Alpine (musl libc / apk) — Python 3.14
+#
+# The deliberately dissimilar target: musl instead of glibc, BusyBox
+# userland, and no manylinux wheels (packages compile from source). This is
+# where native-extension loading and subprocess behaviour are most likely to
+# diverge from the Debian baseline.
+FROM python:3.14-alpine
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+# bash: the smoke scripts are bash, not POSIX sh (Alpine ships only busybox
+# ash). The project itself is pure-Python and we sync with --no-dev, so no C
+# toolchain is needed even though musl has no prebuilt wheels for the dev
+# extras.
+RUN apk add --no-cache bash
+
+ENV UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+
+COPY . .
+RUN uv sync --frozen --no-dev
+
+CMD ["bash", "-c", "uv run --no-dev bash ./scripts/basic_checks.sh && uv run --no-dev bash ./scripts/integration_tests.sh"]

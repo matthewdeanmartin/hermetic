@@ -394,7 +394,7 @@ def test_run_bootstrap_forwards_sealed_flag(mocker):
 def test_about():
     import hermetic.__about__ as about
 
-    assert about.__version__ == "0.2.0"
+    assert about.__version__ == "1.0.0"
 
 
 def test_is_same_interpreter_mocked(mocker):

@@ -1,0 +1,25 @@
+# Keep the Docker build context small and host-agnostic. In particular never
+# ship the host .venv (it contains Windows/host-specific paths and binaries
+# that break inside the Linux images).
+.venv/
+.git/
+.idea/
+.vscode/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.tox/
+__pycache__/
+*.pyc
+
+# Build / coverage / docs artifacts — regenerated, not needed for tests.
+.build_logs/
+htmlcov/
+site/
+dist/
+build/
+*.egg-info/
+.coverage
+.coverage.*
+coverage.xml
+junit.xml

@@ -1,0 +1,33 @@
+# Fedora (glibc / dnf / RPM) — Python 3.14
+#
+# A third, independent userland: RPM packaging, dnf, and a different glibc
+# build than Debian's. We do NOT start from a python:3.14 base — instead uv
+# fetches a *precompiled* standalone CPython 3.14 (python-build-standalone),
+# so this also exercises the "uv-provided interpreter" path with no source
+# build and no C toolchain.
+FROM fedora:41
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+# Only bash is needed: the smoke scripts run `uv run hermetic` / `uv run
+# python`, the project is pure-Python, and we sync with --no-dev so nothing
+# compiles. No gcc/devel headers required.
+RUN dnf -y install bash && dnf clean all
+
+# Pin 3.14 and let uv download the prebuilt interpreter (default downloads
+# policy, not "never").
+ENV UV_LINK_MODE=copy \
+    UV_PYTHON=3.14 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
+RUN uv python install 3.14 \
+    && uv sync --frozen --no-dev --no-install-project --python 3.14
+
+COPY . .
+RUN uv sync --frozen --no-dev --python 3.14
+
+CMD ["bash", "-c", "uv run --no-dev --python 3.14 bash ./scripts/basic_checks.sh && uv run --no-dev --python 3.14 bash ./scripts/integration_tests.sh"]

@@ -1128,7 +1128,7 @@ wheels = [
 
 [[package]]
 name = "hermetic-seal"
-version = "0.2.0"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },

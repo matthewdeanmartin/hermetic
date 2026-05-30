@@ -58,14 +58,14 @@ def install(*, trace: bool = False) -> None:
     def _deny_eval(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
         """Reject direct calls to `eval`."""
         _trace("blocked eval")
-        raise PolicyViolation("dynamic code execution disabled: eval")
+        raise PolicyViolation("dynamic code execution disabled: eval", guard="code_exec", target="eval")
 
     def _guard_exec(*a: Any, **k: Any) -> Any:
         """Allow importlib exec calls and reject other runtime exec usage."""
         if _runtime_exec_is_internal():
             return _originals["exec"](*a, **k)
         _trace("blocked exec")
-        raise PolicyViolation("dynamic code execution disabled: exec")
+        raise PolicyViolation("dynamic code execution disabled: exec", guard="code_exec", target="exec")
 
     def _guard_compile(
         source: Any,
@@ -88,7 +88,7 @@ def install(*, trace: bool = False) -> None:
                 **kwargs,
             )
         _trace("blocked compile")
-        raise PolicyViolation("dynamic code execution disabled: compile")
+        raise PolicyViolation("dynamic code execution disabled: compile", guard="code_exec", target="compile")
 
     def _guard_run_module(*a: Any, **k: Any) -> Any:
         """Allow hermetic's own module execution helper and block others."""
@@ -96,7 +96,7 @@ def install(*, trace: bool = False) -> None:
         if caller.startswith("hermetic."):
             return _originals["runpy.run_module"](*a, **k)
         _trace("blocked runpy.run_module")
-        raise PolicyViolation("dynamic code execution disabled: run_module")
+        raise PolicyViolation("dynamic code execution disabled: run_module", guard="code_exec", target="run_module")
 
     def _guard_run_path(*a: Any, **k: Any) -> Any:
         """Allow hermetic's own path execution helper and block others."""
@@ -104,7 +104,7 @@ def install(*, trace: bool = False) -> None:
         if caller.startswith("hermetic."):
             return _originals["runpy.run_path"](*a, **k)
         _trace("blocked runpy.run_path")
-        raise PolicyViolation("dynamic code execution disabled: run_path")
+        raise PolicyViolation("dynamic code execution disabled: run_path", guard="code_exec", target="run_path")
 
     builtins.eval = _deny_eval
     builtins.exec = _guard_exec

@@ -6,6 +6,11 @@ from hermetic.errors import PolicyViolation
 
 def test_native_import():
     print("Attempting to import ctypes...")
+    import ctypes
+
+    # Reference the import so linters/autoflake never strip it; without an
+    # actual import the block_native guard has nothing to fire on.
+    print(ctypes.__name__)
 
 
 print("--- Testing Native Block ---")
