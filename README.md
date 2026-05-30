@@ -146,3 +146,11 @@ $ hermetic --fs-readonly=./sandbox -- python my_script.py
 ```bash
 $ hermetic --profile block-all -- my_analyzer.py --input data.csv
 ```
+
+## Project Links
+
+- [GitHub](https://github.com/matthewdeanmartin/hermetic)
+- [PyPI](https://pypi.org/project/hermetic-seal/)
+- [Documentation](https://hermetic.readthedocs.io/en/latest/)
+- [Bug Tracker](https://github.com/matthewdeanmartin/hermetic/issues)
+- [Change Log](https://github.com/matthewdeanmartin/hermetic/blob/main/CHANGELOG.md)
