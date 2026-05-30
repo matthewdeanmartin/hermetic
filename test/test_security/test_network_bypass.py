@@ -57,6 +57,39 @@ def test_bind_to_loopback_allowed():
         uninstall()
 
 
+def test_bind_to_ipv4_wildcard_blocked():
+    # 0.0.0.0 is the IPv4 wildcard: a bind on it listens on *every* interface,
+    # including external NICs. The threat-model promises "binds to non-loopback
+    # interfaces are denied when --no-network is on", and IPv6 :: is already
+    # denied — IPv4 0.0.0.0 must be denied too, otherwise it's a clean
+    # inbound-exfil channel.
+    install(allow_localhost=True, allow_domains=[], trace=False)
+    try:
+        s = socket.socket()
+        try:
+            with pytest.raises(PolicyViolation, match="bind"):
+                s.bind(("0.0.0.0", 0))  # nosec
+        finally:
+            s.close()
+    finally:
+        uninstall()
+
+
+def test_bind_to_empty_host_blocked():
+    # socket.bind(("", 0)) is the conventional "bind on all interfaces" idiom
+    # — it resolves to INADDR_ANY just like 0.0.0.0. Must be denied.
+    install(allow_localhost=True, allow_domains=[], trace=False)
+    try:
+        s = socket.socket()
+        try:
+            with pytest.raises(PolicyViolation, match="bind"):
+                s.bind(("", 0))
+        finally:
+            s.close()
+    finally:
+        uninstall()
+
+
 def test_ipv6_metadata_denied():
     install(allow_localhost=False, allow_domains=["fd00:ec2::254"], trace=False)
     try:

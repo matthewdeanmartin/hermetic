@@ -189,7 +189,8 @@ _SITE_CUSTOMIZE = dedent(
             "100.100.100.200",
         }
         LOCAL = {"127.0.0.1","::1","localhost","0.0.0.0"} # nosec
-    
+        BIND_LOOPBACK = {"127.0.0.1","::1","localhost"}
+
         def _host_from(addr):
             try:
                 if isinstance(addr, (tuple, list)) and len(addr) >= 1: return str(addr[0])
@@ -210,8 +211,9 @@ _SITE_CUSTOMIZE = dedent(
         def _bind_allowed(address):
             host = _host_from(address)
             h = _norm_host(host)
-            if not h: return True
-            if h in LOCAL: return True
+            if not h: return False
+            if h in BIND_LOOPBACK: return True
+            if h.startswith("127."): return True
             return False
     
         class GuardedSocket(_orig_socket):

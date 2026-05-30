@@ -31,6 +31,13 @@ _METADATA_HOSTS: Set[str] = {
 
 _LOCALHOST = {"127.0.0.1", "::1", "localhost", "0.0.0.0"}  # nosec
 
+# Strict loopback set for bind(): does NOT include wildcard addresses.
+# 0.0.0.0 and :: (and the empty-string idiom) bind to *every* interface,
+# which would let an attacker accept inbound connections on a real NIC
+# and exfiltrate by waiting for a peer to dial in. The 127.0.0.0/8 range
+# is loopback-only on every modern OS; we accept any address in it.
+_BIND_LOOPBACK_LITERALS = {"127.0.0.1", "::1", "localhost"}
+
 
 def _normalize_host(host: str) -> str:
     """Normalize a hostname for policy checks."""
@@ -95,15 +102,21 @@ def install(
 
     def _bind_allowed(address: Any) -> bool:
         """Allow only loopback-style bind targets."""
-        # Permit binding only to the loopback interface (or wildcard, which
-        # we treat as loopback when allow_localhost is set). Inbound listeners
-        # on a real interface let an attacker exfiltrate by waiting for a
-        # peer to connect in.
+        # Inbound listeners on a real interface let an attacker exfiltrate
+        # by waiting for a peer to connect in. Permit only literal loopback
+        # addresses; reject wildcards (0.0.0.0, ::, "") which would expose
+        # the listener on every interface, and reject the abstract /
+        # ephemeral case (empty host) for the same reason.
         host = _host_from(address)
         h = _normalize_host(host)
         if not h:
-            return True  # ephemeral / abstract namespace; let it through
-        if h in _LOCALHOST:
+            return False
+        if h in _BIND_LOOPBACK_LITERALS:
+            return True
+        # 127.0.0.0/8 is reserved as loopback on every modern OS — accept
+        # any address in that block (e.g. 127.0.0.2 used by some test
+        # harnesses).
+        if h.startswith("127."):
             return True
         return False
 
@@ -292,6 +305,7 @@ if cfg.get("no_network"):
         "100.100.100.200",
     }
     LOCAL = {"127.0.0.1","::1","localhost","0.0.0.0"} # nosec
+    BIND_LOOPBACK = {"127.0.0.1","::1","localhost"}
 
     def _host_from(addr):
         try:
@@ -313,8 +327,9 @@ if cfg.get("no_network"):
     def _bind_allowed(address):
         host = _host_from(address)
         h = _norm_host(host)
-        if not h: return True
-        if h in LOCAL: return True
+        if not h: return False
+        if h in BIND_LOOPBACK: return True
+        if h.startswith("127."): return True
         return False
 
     class GuardedSocket(_orig_socket):
