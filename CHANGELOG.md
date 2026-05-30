@@ -7,10 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2026-05-30
 
-## Changed
+### Changed
 - homogenized language on no vs block
 
-## Added
+### Added
 - Pickle block
 
 ### Fixed
