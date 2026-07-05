@@ -38,7 +38,7 @@ dev = [
     "pydoc-fork>=3.0.0; python_version >= '3.10'",
 
     "troml-dev-status; python_version >= '3.9'",
-    "jiggle_version",
+    "jiggle_version>=2.2.1",
     "keepachangelog-manager-fork[all]>=6.5.0",
     "cffi",
     "httpie",
