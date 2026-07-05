@@ -39,7 +39,7 @@ dev = [
 
     "troml-dev-status; python_version >= '3.9'",
     "jiggle_version>=2.2.1",
-    "keepachangelog-manager-fork[all]>=6.5.0",
+    "keepachangelog-manager-fork[all]>=6.6.0",
     "cffi",
     "httpie",
     "pylint",
