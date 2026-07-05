@@ -16,7 +16,7 @@ from .errors import BootstrapError
 _SITE_CUSTOMIZE = dedent(
     r'''
     # --- BOOTSTRAP START ---
-    import os, sys, json, socket, ssl, subprocess, asyncio, builtins, importlib.machinery as mach, pathlib, time, errno, atexit, shutil
+    import os, sys, json, socket, ssl, subprocess, asyncio, builtins, importlib, importlib.util, importlib.machinery as mach, pathlib, time, errno, atexit, shutil, _imp, zipimport
 
     class _HPolicy(RuntimeError): pass
 
@@ -381,22 +381,53 @@ _SITE_CUSTOMIZE = dedent(
     if cfg.get("block_native") or cfg.get("deny_imports") or cfg.get("no_code_exec"):
         _origExt = mach.ExtensionFileLoader
         _origImp = builtins.__import__
+        _origImportModule = importlib.import_module
         _origMetaPath = sys.meta_path
+        _origPathFindSpec = mach.PathFinder.find_spec
+        _origSourceExec = mach.SourceFileLoader.exec_module
+        _origSourcelessExec = mach.SourcelessFileLoader.exec_module
+        _origZipExec = zipimport.zipimporter.exec_module
+        _origExtCreate = _origExt.create_module
+        _origExtExec = _origExt.exec_module
+        _origCreateDynamic = _imp.create_dynamic
+        _origExecDynamic = _imp.exec_dynamic
         _BLOCK_NATIVE = bool(cfg.get("block_native"))
         _BLOCK_SUBPROC_LIBS = bool(cfg.get("no_subprocess"))
         _BLOCK_PICKLE = bool(cfg.get("no_code_exec"))
-        _DENY = set([n for n in cfg.get("deny_imports", []) if n])
+        _DENY = set([n.strip() for n in cfg.get("deny_imports", []) if n and n.strip()])
         if _BLOCK_NATIVE:
             _DENY |= {"ctypes","_ctypes","cffi","_cffi_backend"}
         if _BLOCK_NATIVE and _BLOCK_SUBPROC_LIBS:
             _DENY |= {"sh","pexpect","plumbum","sarge","delegator"}
         if _BLOCK_PICKLE:
             _DENY |= {"pickle","_pickle","cPickle","marshal","shelve","dill","cloudpickle","jsonpickle"}
-        def _trimp(n): _tr(f"blocked import name={n}")
         def _deny_native_use(name): raise _HPolicy(f"native interface blocked: {name}")
         def _match_import(name, denied):
             root = name.split(".", 1)[0]
             return name == denied or name.startswith(denied + ".") or root == denied
+        def _absolute_import_names(name, globals_dict=None, fromlist=(), level=0):
+            package = ""
+            if globals_dict:
+                package = str(globals_dict.get("__package__") or globals_dict.get("__name__") or "")
+            if level:
+                try: absolute = importlib.util.resolve_name("." * level + name, package)
+                except (ImportError, ValueError): absolute = name
+            else:
+                absolute = name
+            names = {absolute} if absolute else set()
+            if absolute and fromlist:
+                for item in fromlist:
+                    if isinstance(item, str) and item and item != "*":
+                        names.add(absolute + "." + item)
+            return names
+        def _check_names(names):
+            for candidate in names:
+                if any(_match_import(candidate, denied) for denied in _DENY):
+                    _tr(f"blocked import name={candidate}")
+                    raise _HPolicy(f"import blocked: {candidate}")
+        def _loader_name(loader, module=None):
+            spec = getattr(module, "__spec__", None)
+            return str(getattr(spec, "name", "") or getattr(module, "__name__", "") or getattr(loader, "name", ""))
         def _patch_attrs(mod_name, attrs):
             m = sys.modules.get(mod_name)
             if m is None: return
@@ -412,20 +443,58 @@ _SITE_CUSTOMIZE = dedent(
             def __init__(self, ext_loader_type):
                 self._ext_loader_type = ext_loader_type
             def find_spec(self, fullname, path=None, target=None):
-                spec = mach.PathFinder.find_spec(fullname, path, target)
+                _check_names((fullname,))
+                spec = _origPathFindSpec(fullname, path, target)
                 if spec and isinstance(spec.loader, self._ext_loader_type):
                     _tr(f"blocked native import spec={fullname}")
                     raise _HPolicy(f"native import blocked: {fullname}")
                 return spec
         class GuardedExtLoader(_origExt):
             def create_module(self, spec): _tr(f"blocked native import spec={spec.name}"); raise _HPolicy("native import blocked")
+            def exec_module(self, module):
+                name = _loader_name(self, module)
+                _tr(f"blocked native import spec={name}")
+                raise _HPolicy(f"native import blocked: {name}")
+        def _guard_path_find_spec(cls, fullname, path=None, target=None):
+            _check_names((fullname,))
+            spec = _origPathFindSpec(fullname, path, target)
+            if _BLOCK_NATIVE and spec and isinstance(spec.loader, _origExt):
+                _tr(f"blocked native import spec={fullname}")
+                raise _HPolicy(f"native import blocked: {fullname}")
+            return spec
+        def _guard_source_exec(loader, module):
+            _check_names((_loader_name(loader, module),))
+            return _origSourceExec(loader, module)
+        def _guard_sourceless_exec(loader, module):
+            _check_names((_loader_name(loader, module),))
+            return _origSourcelessExec(loader, module)
+        def _guard_zip_exec(loader, module):
+            _check_names((_loader_name(loader, module),))
+            return _origZipExec(loader, module)
+        def _deny_dynamic(spec_or_module, *args, **kwargs):
+            name = str(getattr(spec_or_module, "name", "") or getattr(spec_or_module, "__name__", ""))
+            _tr(f"blocked native import spec={name}")
+            raise _HPolicy(f"native import blocked: {name}")
         def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
-            if any(_match_import(name, denied) for denied in _DENY): _trimp(name); raise _HPolicy("import blocked")
+            _check_names(_absolute_import_names(name, globals, fromlist, level))
             return _origImp(name, globals, locals, fromlist, level)
+        def guarded_import_module(name, package=None):
+            absolute = importlib.util.resolve_name(name, package) if name.startswith(".") else name
+            _check_names((absolute,))
+            return _origImportModule(name, package)
+        mach.PathFinder.find_spec = classmethod(_guard_path_find_spec)
+        mach.SourceFileLoader.exec_module = _guard_source_exec
+        mach.SourcelessFileLoader.exec_module = _guard_sourceless_exec
+        zipimport.zipimporter.exec_module = _guard_zip_exec
         if _BLOCK_NATIVE:
             sys.meta_path = [_NativeExtensionFinder(_origExt)] + list(_origMetaPath)
             mach.ExtensionFileLoader = GuardedExtLoader
+            _origExt.create_module = GuardedExtLoader.create_module
+            _origExt.exec_module = GuardedExtLoader.exec_module
+            _imp.create_dynamic = _deny_dynamic
+            _imp.exec_dynamic = _deny_dynamic
         builtins.__import__ = guarded_import
+        importlib.import_module = guarded_import_module
         if _BLOCK_NATIVE:
             _patch_loaded_native_modules()
             try:

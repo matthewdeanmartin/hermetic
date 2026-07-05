@@ -172,6 +172,10 @@ def test_generated_bootstrap_includes_hardened_guard_surfaces():
         "import multiprocessing as _mp",
         "import io as _io",
         "copytree",
+        "guarded_import_module",
+        "_guard_path_find_spec",
+        "_guard_source_exec",
+        "_deny_dynamic",
     ):
         assert token in _SITE_CUSTOMIZE
 

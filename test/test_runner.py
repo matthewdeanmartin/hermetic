@@ -35,3 +35,17 @@ def test_run_inprocess(mocker):
     cfg = GuardConfig(no_network=True)
     exit_code = run("mymodule", ["mymodule", "--arg"], cfg)
     assert exit_code == 0
+
+
+def test_run_inprocess_passes_no_code_exec_to_import_guard(mocker):
+    """CLI-style in-process runs must activate serialization import denial."""
+    mocker.patch("hermetic.runner.resolve")
+    mocker.patch("hermetic.runner.invoke_inprocess", return_value=0)
+    install_all = mocker.patch("hermetic.runner.install_all")
+    mocker.patch("hermetic.runner.uninstall_all")
+
+    cfg = GuardConfig(no_code_exec=True)
+    assert run("mymodule", ["mymodule"], cfg) == 0
+
+    imports = install_all.call_args.kwargs["imports"]
+    assert imports["block_pickle"] is True

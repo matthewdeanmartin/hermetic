@@ -44,7 +44,7 @@ from .errors import BootstrapError
 _SITE_CUSTOMIZE = dedent(
     r'''
     # --- BOOTSTRAP START ---
-    import os, sys, json, socket, ssl, subprocess, asyncio, builtins, importlib.machinery as mach, pathlib, time, errno, atexit, shutil
+    import os, sys, json, socket, ssl, subprocess, asyncio, builtins, importlib, importlib.util, importlib.machinery as mach, pathlib, time, errno, atexit, shutil, _imp, zipimport
 
     class _HPolicy(RuntimeError): pass
 

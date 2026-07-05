@@ -101,9 +101,10 @@ def run(target: str, target_argv: List[str], cfg: GuardConfig) -> int:
                     "block_native": cfg.block_native,
                     "trace": cfg.trace,
                     "block_subprocess_libs": cfg.no_subprocess,
+                    "block_pickle": cfg.no_code_exec,
                     "deny_imports": cfg.deny_imports,
                 }
-                if cfg.block_native or cfg.deny_imports
+                if cfg.block_native or cfg.deny_imports or cfg.no_code_exec
                 else None
             ),
         )

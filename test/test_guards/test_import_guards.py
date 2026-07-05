@@ -41,12 +41,15 @@ def test_imports_guard_meta_path_finder_blocks_native_specs(monkeypatch):
     install(trace=False)
     try:
         finder = sys.meta_path[0]
-        monkeypatch.setattr(mach.PathFinder, "find_spec", lambda *args, **kwargs: spec)
+        with monkeypatch.context() as patch:
+            patch.setattr(
+                mach.PathFinder, "find_spec", lambda *args, **kwargs: spec
+            )
 
-        with pytest.raises(
-            PolicyViolation, match="native import blocked: native_probe"
-        ):
-            finder.find_spec("native_probe")
+            with pytest.raises(
+                PolicyViolation, match="native import blocked: native_probe"
+            ):
+                finder.find_spec("native_probe")
     finally:
         uninstall()
 

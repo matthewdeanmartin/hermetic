@@ -16,7 +16,9 @@ hermetic. (See `exploits/a.py` in the repo for a worked example.)
    `_cffi_backend`).
 2. Replacing `importlib.machinery.ExtensionFileLoader` with a
    subclass that refuses to load `.so` / `.pyd` extensions.
-3. Patching the dangerous attributes on already-loaded `ctypes` /
+3. Guarding direct `PathFinder`, `ExtensionFileLoader`, and `_imp`
+   dynamic-loader calls.
+4. Patching the dangerous attributes on already-loaded `ctypes` /
    `cffi` modules to raise `PolicyViolation` when called.
 
 ## What it patches
@@ -73,12 +75,10 @@ Each is replaced with a callable that raises `PolicyViolation`.
   An attacker who knows them can build a `CDLL`-equivalent. The
   spec/secure_secure.md document tracks this as a known
   partially-mitigated bypass.
-- **Cached `FileFinder` instances on `sys.path_hooks`**. We
-  invalidate the importer cache, but a `FileFinder` constructed
-  before our subclass install holds the original `ExtensionFileLoader`
-  class in its loaders tuple. Newly-imported native modules go
-  through the new path; modules whose finders were already cached
-  may not.
+- **Arbitrary user-defined loaders**. Hermetic guards CPython's
+  standard extension loader and `_imp` dynamic-loading hooks, but it
+  cannot recognize every third-party object that may execute native
+  code through an already-loaded capability.
 
 ## Tracing
 

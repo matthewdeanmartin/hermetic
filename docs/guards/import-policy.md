@@ -6,8 +6,10 @@ Activated by repeated `--deny-import NAME` (CLI) or
 
 ## What it patches
 
-Hermetic wraps Python's import hook and blocks any import whose fully
-qualified name matches a denied module or package prefix.
+Hermetic checks Python's import hook, `importlib.import_module`,
+`PathFinder.find_spec`, and the standard source, bytecode, and zip
+loaders. It blocks any import whose resolved, fully qualified name
+matches a denied module or package prefix.
 
 Examples:
 
@@ -29,6 +31,8 @@ extension loading.
 
 - **Captured module references** obtained before hermetic installed.
 - **Already-imported modules** that user code still holds references to.
+- **Arbitrary user-defined loaders** that execute code without using
+  Python's standard loader implementations.
 
 ## Examples
 
