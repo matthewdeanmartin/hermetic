@@ -8,8 +8,9 @@ import os
 import re
 import runpy
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Iterable, Optional, Tuple
+from typing import Any
 
 from hermetic.util import which
 
@@ -23,11 +24,11 @@ class TargetSpec:
     module: str
     attr: str  # "__main__" to run as script
     mode: str  # "inprocess" or "bootstrap"
-    exe_path: Optional[str] = None
-    interp_path: Optional[str] = None
+    exe_path: str | None = None
+    interp_path: str | None = None
 
 
-def _console_entry(name: str) -> Optional[Tuple[str, str]]:
+def _console_entry(name: str) -> tuple[str, str] | None:
     """Resolve a console script name to its module and attribute."""
     eps = importlib.metadata.entry_points()
     group: Iterable[importlib.metadata.EntryPoint]
@@ -45,7 +46,7 @@ def _console_entry(name: str) -> Optional[Tuple[str, str]]:
     return None
 
 
-def _script_shebang(exe: str) -> Optional[str]:
+def _script_shebang(exe: str) -> str | None:
     """Read the interpreter path declared in a script shebang."""
     try:
         with open(exe, "rb") as f:

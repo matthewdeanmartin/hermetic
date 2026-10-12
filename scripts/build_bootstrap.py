@@ -11,6 +11,7 @@ in sync with the guard modules, which are the single source of truth.
 
 To run: `python scripts/build_bootstrap.py` from the project root.
 """
+
 import os
 import sys
 
@@ -18,10 +19,15 @@ import sys
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
-from hermetic.guards import filesystem  # noqa
-from hermetic.guards import (code_exec, environment,  # noqa: E402
-                             imports_guard, interpreter, network,
-                             subprocess_guard)
+from hermetic.guards import (
+    code_exec,
+    environment,  # noqa: E402
+    filesystem,  # noqa
+    imports_guard,
+    interpreter,
+    network,
+    subprocess_guard,
+)
 
 # Template for the final bootstrap.py file
 # The {guards_code} placeholder will be filled with the concatenated

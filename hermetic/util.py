@@ -6,15 +6,14 @@ import os
 import shutil
 import sys
 from dataclasses import dataclass
-from typing import List
 
 
 @dataclass(frozen=True)
 class SplitArgs:
     """Hold the separated hermetic and target argument vectors."""
 
-    hermetic_argv: List[str]
-    target_argv: List[str]
+    hermetic_argv: list[str]
+    target_argv: list[str]
 
 
 _HELP_TOKENS = {"-h", "--help", "--version"}

@@ -11,7 +11,7 @@ from typing import Any, TypeVar, cast
 try:
     from typing import Never
 except ImportError:
-    from typing_extensions import Never
+    from typing import Never
 
 from hermetic.errors import PolicyViolation
 
@@ -170,8 +170,7 @@ def uninstall() -> None:
     _installed = False
 
 
-BOOTSTRAP_CODE = dedent(
-    r"""
+BOOTSTRAP_CODE = dedent(r"""
 # --- environment ---
 if cfg.get("no_environment"):
     class _GuardedEnviron:
@@ -218,5 +217,4 @@ if cfg.get("no_environment"):
     os.getenv = _deny_env_read
     os.putenv = _deny_env_write
     os.unsetenv = _deny_env_write
-"""
-)
+""")

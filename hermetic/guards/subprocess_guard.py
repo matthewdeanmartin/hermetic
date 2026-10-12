@@ -13,7 +13,9 @@ from typing import Any
 try:
     from typing import Never  # Python 3.11+
 except ImportError:
-    from typing_extensions import Never  # Python 3.9/3.10
+    from typing import Never  # Python 3.9/3.10
+
+import contextlib
 
 from hermetic.errors import PolicyViolation
 
@@ -159,26 +161,21 @@ def uninstall() -> None:
         if key == "multiprocessing.Process.start":
             mp = sys.modules.get("multiprocessing")
             if mp is not None:
-                try:
+                with contextlib.suppress(AttributeError, TypeError):
                     mp.Process.start = original_func
-                except (AttributeError, TypeError):
-                    pass
             continue
         mod_name, func_name = key.split(".", 1)
         mod = sys.modules.get(mod_name)
         if mod is None:
             continue
-        try:
+        with contextlib.suppress(AttributeError, TypeError):
             setattr(mod, func_name, original_func)
-        except (AttributeError, TypeError):
-            pass
     _installed = False
     _originals.clear()
 
 
 # --- Code for bootstrap.py generation ---
-BOOTSTRAP_CODE = dedent(
-    r"""
+BOOTSTRAP_CODE = dedent(r"""
 # --- subprocess ---
 if cfg.get("no_subprocess"):
     def _deny_exec(*a,**k): _tr("blocked subprocess reason=no-subprocess"); raise _HPolicy("subprocess disabled")
@@ -214,5 +211,4 @@ if cfg.get("no_subprocess"):
     if _mp is not None:
         try: _mp.Process.start = _deny_exec
         except (AttributeError, TypeError): pass
-"""
-)
+""")

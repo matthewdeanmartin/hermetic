@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import io
 import shutil
 
 import pytest
@@ -15,7 +14,7 @@ def test_io_open_write_blocked(tmp_path):
     install(fs_root=None, trace=False)
     try:
         with pytest.raises(PolicyViolation, match="filesystem readonly"):
-            io.open(str(tmp_path / "x.txt"), "w")
+            open(str(tmp_path / "x.txt"), "w")
     finally:
         uninstall()
 

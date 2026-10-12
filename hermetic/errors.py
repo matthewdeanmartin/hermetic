@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 
 class HermeticError(RuntimeError):
     """Base for hermetic failures."""
@@ -21,15 +19,15 @@ class PolicyViolation(HermeticError):
         target: Optional detail about what was blocked (host, path, import name…).
     """
 
-    guard: Optional[str]
-    target: Optional[str]
+    guard: str | None
+    target: str | None
 
     def __init__(
         self,
         message: str,
         *,
-        guard: Optional[str] = None,
-        target: Optional[str] = None,
+        guard: str | None = None,
+        target: str | None = None,
     ) -> None:
         """Create a policy violation with an optional machine-readable guard name."""
         super().__init__(message)

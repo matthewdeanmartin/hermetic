@@ -3,15 +3,16 @@
 
 from __future__ import annotations
 
-import builtins
 import _imp
+import builtins
 import importlib
 import importlib.machinery as mach
 import importlib.util
 import sys
 import zipimport
+from collections.abc import Iterable
 from textwrap import dedent
-from typing import Any, Iterable
+from typing import Any
 
 from hermetic.errors import PolicyViolation
 
@@ -148,9 +149,7 @@ def _absolute_import_names(
     package = ""
     if globals_dict:
         package = str(
-            globals_dict.get("__package__")
-            or globals_dict.get("__name__")
-            or ""
+            globals_dict.get("__package__") or globals_dict.get("__name__") or ""
         )
     if level:
         try:
@@ -249,11 +248,7 @@ def install(
         del cls
         _check_names((fullname,))
         spec = _originals["PathFinder.find_spec_bound"](fullname, path, target)
-        if (
-            block_native
-            and spec
-            and isinstance(spec.loader, _originals["ExtLoader"])
-        ):
+        if block_native and spec and isinstance(spec.loader, _originals["ExtLoader"]):
             _trace(f"blocked native import spec={fullname}")
             raise PolicyViolation(
                 f"native import blocked: {fullname}",
@@ -398,8 +393,7 @@ def uninstall() -> None:
 
 
 # --- Code for bootstrap.py generation ---
-BOOTSTRAP_CODE = dedent(
-    r"""
+BOOTSTRAP_CODE = dedent(r"""
 # --- strict imports ---
 if cfg.get("block_native") or cfg.get("deny_imports") or cfg.get("no_code_exec"):
     _origExt = mach.ExtensionFileLoader
@@ -523,5 +517,4 @@ if cfg.get("block_native") or cfg.get("deny_imports") or cfg.get("no_code_exec")
         try:
             import importlib as _il; _il.invalidate_caches()
         except Exception: pass
-"""
-)
+""")

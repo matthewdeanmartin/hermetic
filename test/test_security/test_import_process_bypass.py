@@ -18,8 +18,8 @@ from pathlib import Path
 
 import pytest
 
-from hermetic.errors import PolicyViolation
 from hermetic.bootstrap import _SITE_CUSTOMIZE
+from hermetic.errors import PolicyViolation
 from hermetic.guards.imports_guard import install, uninstall
 
 
@@ -176,9 +176,7 @@ def test_bootstrap_import_module_enforces_same_policy(tmp_path: Path) -> None:
     site_dir = Path(tempfile.mkdtemp(prefix="hermetic_bootstrap_test_"))
     (site_dir / "sitecustomize.py").write_text(_SITE_CUSTOMIZE, encoding="utf-8")
     env = os.environ.copy()
-    env["HERMETIC_FLAGS_JSON"] = json.dumps(
-        {"deny_imports": ["bootstrap_blocked"]}
-    )
+    env["HERMETIC_FLAGS_JSON"] = json.dumps({"deny_imports": ["bootstrap_blocked"]})
     env["PYTHONPATH"] = os.pathsep.join((str(site_dir), str(tmp_path)))
     code = (
         "import importlib\n"

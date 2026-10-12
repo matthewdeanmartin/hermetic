@@ -11,7 +11,7 @@ from typing import Any, SupportsIndex
 try:
     from typing import Never
 except ImportError:
-    from typing_extensions import Never
+    from typing import Never
 
 from hermetic.errors import PolicyViolation
 
@@ -51,7 +51,9 @@ class _GuardedList(list[Any]):
         self._deny()
 
     def insert(
-        self, index: SupportsIndex, item: Any  # pylint: disable=unused-argument
+        self,
+        index: SupportsIndex,
+        item: Any,  # pylint: disable=unused-argument
     ) -> None:
         """Block insertion into the guarded list."""
         self._deny()
@@ -69,7 +71,9 @@ class _GuardedList(list[Any]):
         self._deny()
 
     def sort(
-        self, *args: Any, **kwargs: Any  # pylint: disable=unused-argument
+        self,
+        *args: Any,
+        **kwargs: Any,  # pylint: disable=unused-argument
     ) -> None:
         """Block sorting the guarded list."""
         self._deny()
@@ -86,11 +90,11 @@ class _GuardedList(list[Any]):
         """Block item deletion on the guarded list."""
         self._deny()
 
-    def __iadd__(self, other: Any) -> "_GuardedList":  # type: ignore[misc]
+    def __iadd__(self, other: Any) -> _GuardedList:  # type: ignore[misc]
         """Block in-place concatenation on the guarded list."""
         return self._deny()
 
-    def __imul__(self, other: Any) -> "_GuardedList":  # type: ignore[misc]
+    def __imul__(self, other: Any) -> _GuardedList:  # type: ignore[misc]
         """Block in-place repetition on the guarded list."""
         return self._deny()
 
@@ -131,7 +135,9 @@ class _GuardedDict(dict[Any, Any]):
         self._deny()
 
     def pop(
-        self, key: Any, default: Any = None  # pylint: disable=unused-argument
+        self,
+        key: Any,
+        default: Any = None,  # pylint: disable=unused-argument
     ) -> Any:
         """Block popping a key from the guarded mapping."""
         return self._deny()
@@ -141,13 +147,17 @@ class _GuardedDict(dict[Any, Any]):
         return self._deny()
 
     def setdefault(
-        self, key: Any, default: Any = None  # pylint: disable=unused-argument
+        self,
+        key: Any,
+        default: Any = None,  # pylint: disable=unused-argument
     ) -> Any:
         """Block setdefault on the guarded mapping."""
         self._deny()
 
     def update(
-        self, *args: Any, **kwargs: Any  # pylint: disable=unused-argument
+        self,
+        *args: Any,
+        **kwargs: Any,  # pylint: disable=unused-argument
     ) -> None:
         """Block bulk updates on the guarded mapping."""
         self._deny()
@@ -228,8 +238,7 @@ def uninstall() -> None:
     _installed = False
 
 
-BOOTSTRAP_CODE = dedent(
-    r"""
+BOOTSTRAP_CODE = dedent(r"""
 # --- interpreter mutation ---
 if cfg.get("no_interpreter_mutation"):
     import site as _site
@@ -289,5 +298,4 @@ if cfg.get("no_interpreter_mutation"):
     if hasattr(os, "fchdir"):
         os.fchdir = _deny_fchdir
     _site.addsitedir = _deny_addsitedir
-"""
-)
+""")

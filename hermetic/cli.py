@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-from typing import List
 
 from hermetic.__about__ import __version__
 from hermetic.profiles import GuardConfig, apply_profile
@@ -105,7 +104,7 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def parse_hermetic_args(argv: List[str]) -> GuardConfig:
+def parse_hermetic_args(argv: list[str]) -> GuardConfig:
     """Translate CLI flags into a guard configuration."""
     parser = build_parser()
     ns = parser.parse_args(argv)
@@ -131,7 +130,7 @@ def parse_hermetic_args(argv: List[str]) -> GuardConfig:
     return cfg
 
 
-def main(argv: List[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """Run the CLI and dispatch to the requested target."""
     argv = list(sys.argv[1:] if argv is None else argv)
     split = split_argv(argv)

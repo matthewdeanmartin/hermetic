@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 from hermetic.bootstrap import write_sitecustomize
 from hermetic.errors import PolicyViolation
@@ -13,7 +13,7 @@ from hermetic.profiles import GuardConfig
 from hermetic.resolver import TargetSpec, invoke_inprocess, resolve
 
 
-def config_to_flags(cfg: GuardConfig) -> Dict[str, Any]:
+def config_to_flags(cfg: GuardConfig) -> dict[str, Any]:
     """Convert a guard config into bootstrap-compatible flag data."""
     return {
         "no_network": cfg.no_network,
@@ -32,7 +32,7 @@ def config_to_flags(cfg: GuardConfig) -> Dict[str, Any]:
     }
 
 
-def run(target: str, target_argv: List[str], cfg: GuardConfig) -> int:
+def run(target: str, target_argv: list[str], cfg: GuardConfig) -> int:
     """Run a target under the requested guard configuration."""
     spec: TargetSpec = resolve(target)
 
@@ -54,7 +54,7 @@ def run(target: str, target_argv: List[str], cfg: GuardConfig) -> int:
 
             try:
                 completed = subprocess.run(  # nosec
-                    [spec.exe_path] + target_argv[1:],
+                    [spec.exe_path, *target_argv[1:]],
                     env=env,
                     check=False,
                 )
@@ -70,7 +70,7 @@ def run(target: str, target_argv: List[str], cfg: GuardConfig) -> int:
             # On Unix-like systems, replace the current process for a seamless handoff.
             # This is the original, desired behavior for Linux/macOS.
             os.execve(
-                spec.exe_path, [spec.exe_path] + target_argv[1:], env
+                spec.exe_path, [spec.exe_path, *target_argv[1:]], env
             )  # never returns  # nosec
 
     # in-process: install guards then import/invoke

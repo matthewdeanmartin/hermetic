@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import builtins
+import contextlib
 import io
 import os
 import pathlib
@@ -129,17 +130,13 @@ def install(*, fs_root: str | None = None, trace: bool = False) -> None:
     os.open = os_open_guard
     # io.open is documented as identical to builtins.open. Patch it too so
     # libraries that did `from io import open` get our guarded version.
-    try:
+    with contextlib.suppress(AttributeError, TypeError):
         io.open = open_guard
-    except (AttributeError, TypeError):
-        pass
     for native_mod in ("posix", "nt"):
         nm = sys.modules.get(native_mod)
         if nm is not None and hasattr(nm, "open"):
-            try:
-                setattr(nm, "open", os_open_guard)
-            except (AttributeError, TypeError):
-                pass
+            with contextlib.suppress(AttributeError, TypeError):
+                nm.open = os_open_guard
 
     def _deny(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
         """Reject filesystem mutation helpers."""
@@ -176,10 +173,8 @@ def install(*, fs_root: str | None = None, trace: bool = False) -> None:
         ):
             if hasattr(shutil_mod, name):
                 _originals[f"shutil.{name}"] = getattr(shutil_mod, name)
-                try:
+                with contextlib.suppress(AttributeError, TypeError):
                     setattr(shutil_mod, name, _deny)
-                except (AttributeError, TypeError):
-                    pass
 
 
 def uninstall() -> None:
@@ -192,27 +187,19 @@ def uninstall() -> None:
         if "." in k:
             mod_name, func_name = k.split(".", 1)
             if mod_name == "os":
-                try:
+                with contextlib.suppress(AttributeError, TypeError):
                     setattr(os, func_name, v)
-                except (AttributeError, TypeError):
-                    pass
             elif mod_name == "Path":
-                try:
+                with contextlib.suppress(AttributeError, TypeError):
                     setattr(pathlib.Path, func_name, v)
-                except (AttributeError, TypeError):
-                    pass
             elif mod_name == "io":
-                try:
+                with contextlib.suppress(AttributeError, TypeError):
                     setattr(io, func_name, v)
-                except (AttributeError, TypeError):
-                    pass
             else:
                 mod = sys.modules.get(mod_name)
                 if mod is not None:
-                    try:
+                    with contextlib.suppress(AttributeError, TypeError):
                         setattr(mod, func_name, v)
-                    except (AttributeError, TypeError):
-                        pass
         else:
             setattr(builtins, k, v)
 
@@ -220,8 +207,7 @@ def uninstall() -> None:
 
 
 # --- Code for bootstrap.py generation ---
-BOOTSTRAP_CODE = dedent(
-    r"""
+BOOTSTRAP_CODE = dedent(r"""
 # --- fs readonly ---
 if cfg.get("fs_readonly"):
     ROOT = cfg.get("fs_root")
@@ -278,5 +264,4 @@ if cfg.get("fs_readonly"):
             if hasattr(_shutil, name):
                 try: setattr(_shutil, name, _deny_fs)
                 except (AttributeError, TypeError): pass
-"""
-)
+""")

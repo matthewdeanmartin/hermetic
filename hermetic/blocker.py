@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import threading
-from contextlib import AbstractAsyncContextManager, ContextDecorator
+from collections.abc import Iterable
+from contextlib import AbstractAsyncContextManager, ContextDecorator, suppress
 from dataclasses import dataclass, field
-from typing import Any, Iterable, List, Optional
+from typing import Any
 
 from hermetic.guards import install_all, uninstall_all
 
 # Process-wide merged policy state for guard activation.
 _LOCK = threading.RLock()
-_ACTIVE_CONFIGS: list["BlockConfig"] = []
+_ACTIVE_CONFIGS: list[BlockConfig] = []
 # Sealed latch: once set, _reapply_guards_locked() refuses to weaken the
 # active policy and refuses to uninstall. The latch is per-process and
 # never resets — opting in is an irreversible choice. Bypass requires
@@ -27,19 +28,19 @@ class BlockConfig:
     block_network: bool = False
     block_subprocess: bool = False
     fs_readonly: bool = False
-    fs_root: Optional[str] = None
+    fs_root: str | None = None
     block_environment: bool = False
     block_code_exec: bool = False
     block_interpreter_mutation: bool = False
     block_native: bool = False
     allow_localhost: bool = False
-    allow_domains: List[str] = field(default_factory=list)
-    deny_imports: List[str] = field(default_factory=list)
+    allow_domains: list[str] = field(default_factory=list)
+    deny_imports: list[str] = field(default_factory=list)
     trace: bool = False
     sealed: bool = False
 
     @classmethod
-    def from_kwargs(cls, **kw: Any) -> "BlockConfig":
+    def from_kwargs(cls, **kw: Any) -> BlockConfig:
         """Normalize accepted keyword aliases into a config instance."""
         # Accept both long and short kw names
         mapping = {
@@ -70,11 +71,11 @@ class BlockConfig:
             data[mapping[k]] = v
         return cls(**data)
 
-    def __or__(self, other: "BlockConfig") -> "BlockConfig":
+    def __or__(self, other: BlockConfig) -> BlockConfig:
         """Merge two policies; stricter settings win.  Alias for ``merged_with``."""
         return self.merged_with(other)
 
-    def merged_with(self, other: "BlockConfig") -> "BlockConfig":
+    def merged_with(self, other: BlockConfig) -> BlockConfig:
         """Combine two policies so the stricter settings win."""
         return BlockConfig(
             block_network=self.block_network or other.block_network,
@@ -151,7 +152,7 @@ class _HermeticBlocker(
 ):
     """Manage a blocker policy as a sync or async context manager."""
 
-    __slots__ = ("cfg", "_entered")
+    __slots__ = ("_entered", "cfg")
 
     def __init__(self, cfg: BlockConfig) -> None:
         """Store the policy that should be applied on entry."""
@@ -159,7 +160,7 @@ class _HermeticBlocker(
         self._entered = False
 
     # ---- sync protocol ----
-    def __enter__(self) -> "_HermeticBlocker":
+    def __enter__(self) -> _HermeticBlocker:
         """Activate this blocker policy for the current process."""
         global _SEALED
         with _LOCK:
@@ -175,15 +176,13 @@ class _HermeticBlocker(
         with _LOCK:
             if self._entered:
                 self._entered = False
-                try:
+                with suppress(ValueError):
                     _ACTIVE_CONFIGS.remove(self.cfg)
-                except ValueError:
-                    pass
                 _reapply_guards_locked()
         # don’t suppress exceptions
 
     # ---- async protocol ----
-    async def __aenter__(self) -> "_HermeticBlocker":
+    async def __aenter__(self) -> _HermeticBlocker:
         """Activate the blocker policy inside an async context."""
         # Reuse sync enter; safe in async contexts
         return self.__enter__()
@@ -194,12 +193,12 @@ class _HermeticBlocker(
 
 
 def hermetic_blocker(
-    _config: Optional[BlockConfig] = None,
+    _config: BlockConfig | None = None,
     *,
     block_network: bool = False,
     block_subprocess: bool = False,
     fs_readonly: bool = False,
-    fs_root: Optional[str] = None,
+    fs_root: str | None = None,
     block_environment: bool = False,
     block_code_exec: bool = False,
     block_interpreter_mutation: bool = False,
@@ -209,7 +208,7 @@ def hermetic_blocker(
     deny_imports: Iterable[str] = (),
     trace: bool = False,
     sealed: bool = False,
-    profile: Optional[str] = None,
+    profile: str | None = None,
 ) -> _HermeticBlocker:
     """Build a blocker that applies the requested hermetic guards.
 
@@ -276,7 +275,7 @@ def hermetic_blocker(
 
 # Optional convenience decorator with arguments name parity
 def with_hermetic(
-    _config: Optional[BlockConfig] = None, **kwargs: Any
+    _config: BlockConfig | None = None, **kwargs: Any
 ) -> _HermeticBlocker:
     """Mirror `hermetic_blocker` under a decorator-friendly name."""
     return hermetic_blocker(_config, **kwargs)

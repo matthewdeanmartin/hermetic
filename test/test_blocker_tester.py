@@ -14,7 +14,7 @@ def reset_blocker_state(monkeypatch):
     predictable guard stubs that *record* calls without performing real patches.
     """
     # Re-import to get the module; don't reload yet (we'll mutate state below).
-    import hermetic.blocker as blocker
+    from hermetic import blocker
 
     # Reset lock-guarded policy state.
     blocker._ACTIVE_CONFIGS.clear()  # noqa: SLF001
@@ -53,7 +53,7 @@ def reset_blocker_state(monkeypatch):
         calls["timeline"].append("uninstall")
 
     # Patch guards at the package import location the code uses.
-    import hermetic.guards as guards  # package must exist in project
+    from hermetic import guards  # package must exist in project
 
     monkeypatch.setattr(guards, "install_all", _stub_install_all, raising=True)
     monkeypatch.setattr(guards, "uninstall_all", _stub_uninstall_all, raising=True)
@@ -181,9 +181,8 @@ def test_exception_not_suppressed_and_uninstalls(reset_blocker_state):
 
     class Boom(Exception): ...
 
-    with pytest.raises(Boom):
-        with hermetic_blocker(block_network=True):
-            raise Boom("kaboom")
+    with pytest.raises(Boom), hermetic_blocker(block_network=True):
+        raise Boom("kaboom")
     # uninstall executed in finally
     assert len(R.calls["uninstall_all"]) == 2
 

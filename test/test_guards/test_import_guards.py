@@ -11,7 +11,6 @@ from hermetic.guards.imports_guard import install, uninstall
 def test_imports_guard():
     install(trace=True)
     try:
-
         with pytest.raises(PolicyViolation, match="import blocked: ctypes"):
             import ctypes
 
@@ -42,9 +41,7 @@ def test_imports_guard_meta_path_finder_blocks_native_specs(monkeypatch):
     try:
         finder = sys.meta_path[0]
         with monkeypatch.context() as patch:
-            patch.setattr(
-                mach.PathFinder, "find_spec", lambda *args, **kwargs: spec
-            )
+            patch.setattr(mach.PathFinder, "find_spec", lambda *args, **kwargs: spec)
 
             with pytest.raises(
                 PolicyViolation, match="native import blocked: native_probe"

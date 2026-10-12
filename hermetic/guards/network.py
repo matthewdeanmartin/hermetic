@@ -7,8 +7,9 @@ import errno
 import socket
 import ssl
 import sys
+from collections.abc import Iterable
 from textwrap import dedent
-from typing import Any, Iterable, Set
+from typing import Any
 
 from hermetic.errors import PolicyViolation
 
@@ -19,7 +20,7 @@ _installed = False
 # Deny well-known cloud metadata endpoints even if DNS allowed.
 # IPv6 forms and link-local SLAAC variants included — AWS IMDSv2 supports
 # IPv6 at fd00:ec2::254; the IPv4 metadata IP also has an IPv6-mapped form.
-_METADATA_HOSTS: Set[str] = {
+_METADATA_HOSTS: set[str] = {
     "169.254.169.254",  # AWS/Azure/OpenStack/DigitalOcean metadata
     "metadata.google.internal",  # GCP
     "metadata",  # short-form GCP alias when search-domain matches
@@ -297,8 +298,7 @@ def uninstall() -> None:
 
 
 # --- Code for bootstrap.py generation ---
-BOOTSTRAP_CODE = dedent(
-    r"""
+BOOTSTRAP_CODE = dedent(r"""
 # --- network ---
 if cfg.get("no_network"):
     _orig_socket = socket.socket
@@ -420,5 +420,4 @@ if cfg.get("no_network"):
         socket.fromfd = _guard_fromfd
     if hasattr(socket, "fromshare"):
         socket.fromshare = _guard_fromshare
-"""
-)
+""")

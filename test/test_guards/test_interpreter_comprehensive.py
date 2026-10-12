@@ -212,7 +212,7 @@ class TestInstallUninstall:
         uninstall()  # no crash
 
     def test_uninstall_restores_syspath(self, tmp_path):
-        original_type = type(sys.path)
+        type(sys.path)
         install()
         uninstall()
         # After uninstall, sys.path is back to a plain list

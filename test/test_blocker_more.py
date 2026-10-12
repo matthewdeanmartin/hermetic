@@ -13,16 +13,11 @@ from __future__ import annotations
 
 import socket
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 
 from hermetic.blocker import BlockConfig, hermetic_blocker, with_hermetic
 from hermetic.errors import PolicyViolation
-
-if TYPE_CHECKING:
-    pass
-
 
 # ============================================================================
 # Network Guard Tests
@@ -204,9 +199,8 @@ class TestFilesystemGuard:
         """Verify reading files is allowed in readonly mode."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("content")
-        with hermetic_blocker(fs_readonly=True):
-            with open(test_file, "r") as f:
-                assert f.read() == "content"
+        with hermetic_blocker(fs_readonly=True), open(test_file, "r") as f:
+            assert f.read() == "content"
 
     def test_pathlib_write_blocked(self, tmp_path: Path) -> None:
         """Verify pathlib write operations are blocked."""
@@ -377,12 +371,14 @@ class TestMultipleGuards:
 
     def test_nested_contexts_merge_stricter_guards(self) -> None:
         """Inner contexts should add restrictions instead of being ignored."""
-        with hermetic_blocker(block_network=True):
-            with hermetic_blocker(block_subprocess=True):
-                with pytest.raises(PolicyViolation):
-                    import subprocess
+        with (
+            hermetic_blocker(block_network=True),
+            hermetic_blocker(block_subprocess=True),
+        ):
+            with pytest.raises(PolicyViolation):
+                import subprocess
 
-                    subprocess.run(["bash", "-c", "echo"], capture_output=True)
+                subprocess.run(["bash", "-c", "echo"], capture_output=True)
 
 
 # ============================================================================
@@ -701,17 +697,15 @@ class TestEdgeCases:
 
     def test_guard_reinstallation_after_uninstall(self) -> None:
         """Verify guards can be reinstalled after full uninstallation."""
-        with hermetic_blocker(block_network=True):
-            with pytest.raises(PolicyViolation):
-                socket.getaddrinfo("example.com", 80)
+        with hermetic_blocker(block_network=True), pytest.raises(PolicyViolation):
+            socket.getaddrinfo("example.com", 80)
 
         # Guards removed, verify network works
         socket.getaddrinfo("example.com", 80)
 
         # Reinstall guards
-        with hermetic_blocker(block_network=True):
-            with pytest.raises(PolicyViolation):
-                socket.getaddrinfo("example.com", 80)
+        with hermetic_blocker(block_network=True), pytest.raises(PolicyViolation):
+            socket.getaddrinfo("example.com", 80)
 
     @pytest.mark.parametrize("mode", ["r+", "w+", "a+", "x+"])
     def test_open_plus_modes_blocked(self, tmp_path: Path, mode: str) -> None:

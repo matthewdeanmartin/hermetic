@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
 
 
 @dataclass
@@ -24,8 +23,8 @@ class GuardConfig:
     no_interpreter_mutation: bool = False
     block_native: bool = False
     allow_localhost: bool = False
-    allow_domains: List[str] = field(default_factory=list)
-    deny_imports: List[str] = field(default_factory=list)
+    allow_domains: list[str] = field(default_factory=list)
+    deny_imports: list[str] = field(default_factory=list)
     trace: bool = False
     sealed: bool = False
 

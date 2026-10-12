@@ -268,9 +268,8 @@ class TestHermeticBlockerAcceptsBlockConfig:
 
     def test_with_hermetic_accepts_blockconfig(self):
         cfg = BlockConfig(block_network=True)
-        with with_hermetic(cfg):
-            with pytest.raises(PolicyViolation):
-                socket.getaddrinfo("example.com", 80)
+        with with_hermetic(cfg), pytest.raises(PolicyViolation):
+            socket.getaddrinfo("example.com", 80)
 
     def test_positional_blockconfig_as_decorator(self):
         cfg = BlockConfig(block_network=True)
@@ -285,9 +284,8 @@ class TestHermeticBlockerAcceptsBlockConfig:
     def test_prebuilt_config_reuse(self):
         cfg = BlockConfig(block_network=True)
         for _ in range(3):
-            with hermetic_blocker(cfg):
-                with pytest.raises(PolicyViolation):
-                    socket.getaddrinfo("example.com", 80)
+            with hermetic_blocker(cfg), pytest.raises(PolicyViolation):
+                socket.getaddrinfo("example.com", 80)
 
 
 # ============================================================================

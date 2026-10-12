@@ -40,9 +40,11 @@ def test_sealed_blocks_uninstall():
 
 
 def test_unsealed_uninstalls_on_exit():
-    with hermetic_blocker(block_network=True, sealed=False):
-        with pytest.raises(PolicyViolation):
-            socket.getaddrinfo("example.com", 80)
+    with (
+        hermetic_blocker(block_network=True, sealed=False),
+        pytest.raises(PolicyViolation),
+    ):
+        socket.getaddrinfo("example.com", 80)
 
     # Outside the block, network is restored. We don't actually try to
     # connect — just verify no PolicyViolation is raised on the patched
