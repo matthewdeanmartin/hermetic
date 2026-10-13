@@ -4,7 +4,6 @@ set dotenv-load := true
 
 # ---- Variables ----
 LOGS_DIR := ".justlogs"
-STAMP_DIR := ".build_history"
 JOBS := num_cpus()
 
 # Determine runner prefix: if no virtualenv active, use `uv run`, otherwise nothing
@@ -31,41 +30,33 @@ clean: clean-pyc clean-test
 install-plugins:
     @echo "N/A"
 
-init-build-history:
-    mkdir -p {{STAMP_DIR}}
-
 # ---- Formatting / Linting (serial invariants) ----
-isort: init-build-history
+isort:
     @echo "Formatting imports"
     {{venv}} isort .
-    touch {{STAMP_DIR}}/isort
 
-black: isort init-build-history
+black: isort
     @echo "Formatting code"
     {{venv}} metametameta pep621
     {{venv}} python scripts/build_bootstrap.py
     {{venv}} black hermetic
     {{venv}} black test
     {{venv}} git2md hermetic --ignore __init__.py __pycache__ --output SOURCE.md
-    touch {{STAMP_DIR}}/black
 
-pre-commit: black init-build-history
+pre-commit: black
     @echo "Pre-commit checks"
     {{venv}} pre-commit run --all-files
-    touch {{STAMP_DIR}}/pre-commit
 
 ruff-fix:
     {{venv}} ruff check --fix
 
-pylint: black ruff-fix init-build-history
+pylint: black ruff-fix
     @echo "Linting with pylint"
     {{venv}} pylint hermetic --fail-under 9.9 --rcfile=.pylintrc
-    touch {{STAMP_DIR}}/pylint
 
-bandit: init-build-history
+bandit:
     @echo "Security checks"
     {{venv}} bandit hermetic -r --quiet
-    touch {{STAMP_DIR}}/bandit
 
 mypy:
     {{venv}} mypy hermetic --ignore-missing-imports --check-untyped-defs
