@@ -19,15 +19,10 @@ import sys
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
-from hermetic.guards import (
-    code_exec,
-    environment,  # noqa: E402
-    filesystem,  # noqa
-    imports_guard,
-    interpreter,
-    network,
-    subprocess_guard,
-)
+from hermetic.guards import environment  # noqa: E402
+from hermetic.guards import filesystem  # noqa
+from hermetic.guards import (code_exec, imports_guard, interpreter, network,
+                             subprocess_guard)
 
 # Template for the final bootstrap.py file
 # The {guards_code} placeholder will be filled with the concatenated
@@ -37,11 +32,13 @@ BOOTSTRAP_PY_TEMPLATE = r"""# hermetic/bootstrap.py
 '''Bootstrap helpers for installing guards in a foreign interpreter.'''
 
 from __future__ import annotations
+
 import json
 import os
 import tempfile
 from textwrap import dedent
-from typing import Dict, Any
+from typing import Any
+
 from .errors import BootstrapError
 
 # Minimal bootstrap sitecustomize that installs guards without requiring hermetic package to be importable.
@@ -92,7 +89,7 @@ _SITE_CUSTOMIZE = dedent(
     '''
 )
 
-def write_sitecustomize(flags: Dict[str, Any]) -> str:
+def write_sitecustomize(flags: dict[str, Any]) -> str:
     '''Write a temporary sitecustomize module that installs bootstrap guards.'''
     try:
         d = tempfile.mkdtemp(prefix="hermetic_site_")

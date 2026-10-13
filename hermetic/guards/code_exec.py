@@ -143,8 +143,7 @@ def uninstall() -> None:
     _installed = False
 
 
-BOOTSTRAP_CODE = dedent(
-    r"""
+BOOTSTRAP_CODE = dedent(r"""
 # --- dynamic code execution ---
 if cfg.get("no_code_exec"):
     def _caller_name(depth=1):
@@ -202,5 +201,4 @@ if cfg.get("no_code_exec"):
     builtins.compile = _guard_compile
     _runpy.run_module = _guard_run_module
     _runpy.run_path = _guard_run_path
-"""
-)
+""")

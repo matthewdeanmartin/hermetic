@@ -191,4 +191,4 @@ constraint-dependencies = ["httpx<1"]
 universal = true
 
 [tool.ruff.lint]
-ignore = ["RUF100", "B003", "BLE001", "C408", "PLW1510", "PYI034", "PYI036", "S102", "S110", "SIM103", "SIM115", "SIM117", "TRY002"]  # unused noqa differs across Python versions
+ignore = ["RUF100", "I001", "B003", "BLE001", "C408", "PLW1510", "PYI034", "PYI036", "S102", "S110", "SIM103", "SIM115", "SIM117", "TRY002"]  # unused noqa differs across Python versions

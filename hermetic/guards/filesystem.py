@@ -136,7 +136,7 @@ def install(*, fs_root: str | None = None, trace: bool = False) -> None:
         nm = sys.modules.get(native_mod)
         if nm is not None and hasattr(nm, "open"):
             with contextlib.suppress(AttributeError, TypeError):
-                nm.open = os_open_guard
+                nm.open = os_open_guard  # type: ignore[attr-defined]
 
     def _deny(*a: Any, **k: Any) -> None:  # pylint: disable=unused-argument
         """Reject filesystem mutation helpers."""

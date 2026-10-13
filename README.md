@@ -1,7 +1,7 @@
 # hermetic
 
 This is lightweight sandboxing for semi-trusted code or for disabling APIs in unit tests. What is semi-trusted code?
-Things like pluggy plugins, LLM generated code. Unit test code is trusted, but as design decision, you may want to 
+Things like pluggy plugins, LLM generated code. Unit test code is trusted, but as design decision, you may want to
 avoid accidentally creating integration tests.
 
 Run a python tool, or your application with certain APIs disabled, such as network or subprocess.
